@@ -1,5 +1,6 @@
 ---
 import type { MergedProject } from '../types/project.js';
+import EditControls from './EditControls.astro';
 
 interface Props {
   project: MergedProject;
@@ -99,4 +100,7 @@ const safeGithub =
       Due: {project.due_date}
     </p>
   )}
+
+  <!-- Inline edit controls -->
+  <EditControls project={project} />
 </article>

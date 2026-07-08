@@ -1,0 +1,225 @@
+---
+import type { MergedProject } from '../types/project.js';
+
+interface Props {
+  project: MergedProject;
+}
+
+const { project } = Astro.props;
+
+const STATUS_OPTIONS = [
+  { value: '__reset__', label: '— reset status —' },
+  { value: 'active', label: 'active' },
+  { value: 'in-progress', label: 'in-progress' },
+  { value: 'on-hold', label: 'on-hold' },
+  { value: 'complete', label: 'complete' },
+];
+
+const PRIORITY_OPTIONS = [
+  { value: '__reset__', label: '— reset priority —' },
+  { value: 'high', label: 'high' },
+  { value: 'medium', label: 'medium' },
+  { value: 'low', label: 'low' },
+];
+
+// If there's an override, show current merged value; otherwise show reset sentinel
+const currentStatus = project.status ?? '__reset__';
+const currentPriority = project.priority ?? '__reset__';
+---
+
+<div class="mt-3 pt-3 border-t border-gray-100 flex flex-col gap-3" data-project-id={project.id}>
+
+  <!-- Due date control -->
+  <fieldset class="flex flex-col gap-1.5">
+    <legend class="text-xs font-semibold uppercase tracking-wide text-gray-400">Due date</legend>
+    <div class="flex items-center gap-2 flex-wrap">
+      <input
+        type="date"
+        id={`due-date-${project.id}`}
+        name="date"
+        value={project.due_date ?? ''}
+        aria-label={`Due date for ${project.name}`}
+        class="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+      />
+      <button
+        type="button"
+        data-action="set-due-date"
+        aria-label={`Set due date for ${project.name}`}
+        class="rounded bg-blue-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
+      >
+        Set
+      </button>
+      <button
+        type="button"
+        data-action="clear-due-date"
+        aria-label={`Clear due date for ${project.name}`}
+        class="rounded border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:opacity-50"
+      >
+        Clear
+      </button>
+    </div>
+    <p class="text-xs text-red-600 hidden" data-error="due-date" role="alert" aria-live="polite"></p>
+  </fieldset>
+
+  <!-- Status override control -->
+  <div class="flex flex-col gap-1.5">
+    <label
+      for={`status-${project.id}`}
+      class="text-xs font-semibold uppercase tracking-wide text-gray-400"
+    >
+      Status override
+    </label>
+    <select
+      id={`status-${project.id}`}
+      name="status"
+      data-action="override-status"
+      aria-label={`Status override for ${project.name}`}
+      class="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
+    >
+      {STATUS_OPTIONS.map((opt) => (
+        <option
+          value={opt.value}
+          selected={opt.value === currentStatus || (opt.value === '__reset__' && !STATUS_OPTIONS.slice(1).some(o => o.value === currentStatus))}
+        >
+          {opt.label}
+        </option>
+      ))}
+    </select>
+    <p class="text-xs text-red-600 hidden" data-error="status" role="alert" aria-live="polite"></p>
+  </div>
+
+  <!-- Priority override control -->
+  <div class="flex flex-col gap-1.5">
+    <label
+      for={`priority-${project.id}`}
+      class="text-xs font-semibold uppercase tracking-wide text-gray-400"
+    >
+      Priority override
+    </label>
+    <select
+      id={`priority-${project.id}`}
+      name="priority"
+      data-action="override-priority"
+      aria-label={`Priority override for ${project.name}`}
+      class="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
+    >
+      {PRIORITY_OPTIONS.map((opt) => (
+        <option
+          value={opt.value}
+          selected={opt.value === currentPriority || (opt.value === '__reset__' && !PRIORITY_OPTIONS.slice(1).some(o => o.value === currentPriority))}
+        >
+          {opt.label}
+        </option>
+      ))}
+    </select>
+    <p class="text-xs text-red-600 hidden" data-error="priority" role="alert" aria-live="polite"></p>
+  </div>
+
+</div>
+
+<script>
+  // Wire up all edit-controls panels on the page
+  document.querySelectorAll<HTMLElement>('[data-project-id]').forEach((panel) => {
+    const projectId = panel.dataset.projectId!;
+
+    function showError(name: string, msg: string) {
+      const el = panel.querySelector<HTMLElement>(`[data-error="${name}"]`);
+      if (el) {
+        el.textContent = msg;
+        el.classList.remove('hidden');
+      }
+    }
+
+    function clearError(name: string) {
+      const el = panel.querySelector<HTMLElement>(`[data-error="${name}"]`);
+      if (el) {
+        el.textContent = '';
+        el.classList.add('hidden');
+      }
+    }
+
+    function setDisabled(els: Element[], disabled: boolean) {
+      els.forEach((el) => {
+        (el as HTMLButtonElement | HTMLSelectElement | HTMLInputElement).disabled = disabled;
+      });
+    }
+
+    async function postJson(url: string, body: Record<string, unknown>): Promise<void> {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({})) as Record<string, unknown>;
+        throw new Error((data.error as string) ?? `HTTP ${res.status}`);
+      }
+    }
+
+    // --- Due date ---
+    const dateInput = panel.querySelector<HTMLInputElement>(`#due-date-${projectId}`);
+    const setBtn = panel.querySelector<HTMLButtonElement>('[data-action="set-due-date"]');
+    const clearBtn = panel.querySelector<HTMLButtonElement>('[data-action="clear-due-date"]');
+
+    setBtn?.addEventListener('click', async () => {
+      clearError('due-date');
+      const dueDateControls = [dateInput, setBtn, clearBtn].filter(Boolean) as Element[];
+      setDisabled(dueDateControls, true);
+      try {
+        const dateVal = dateInput?.value?.trim() ?? '';
+        await postJson('/api/due-date', { projectId, date: dateVal || null });
+        window.location.reload();
+      } catch (e) {
+        showError('due-date', (e as Error).message);
+        setDisabled(dueDateControls, false);
+      }
+    });
+
+    clearBtn?.addEventListener('click', async () => {
+      clearError('due-date');
+      const dueDateControls = [dateInput, setBtn, clearBtn].filter(Boolean) as Element[];
+      setDisabled(dueDateControls, true);
+      try {
+        await postJson('/api/due-date', { projectId, date: null });
+        window.location.reload();
+      } catch (e) {
+        showError('due-date', (e as Error).message);
+        setDisabled(dueDateControls, false);
+      }
+    });
+
+    // --- Status override ---
+    const statusSelect = panel.querySelector<HTMLSelectElement>(`[data-action="override-status"]`);
+
+    statusSelect?.addEventListener('change', async () => {
+      clearError('status');
+      statusSelect.disabled = true;
+      try {
+        const rawVal = statusSelect.value;
+        const value = rawVal === '__reset__' ? null : rawVal;
+        await postJson('/api/override', { projectId, field: 'status', value });
+        window.location.reload();
+      } catch (e) {
+        showError('status', (e as Error).message);
+        statusSelect.disabled = false;
+      }
+    });
+
+    // --- Priority override ---
+    const prioritySelect = panel.querySelector<HTMLSelectElement>(`[data-action="override-priority"]`);
+
+    prioritySelect?.addEventListener('change', async () => {
+      clearError('priority');
+      prioritySelect.disabled = true;
+      try {
+        const rawVal = prioritySelect.value;
+        const value = rawVal === '__reset__' ? null : rawVal;
+        await postJson('/api/override', { projectId, field: 'priority', value });
+        window.location.reload();
+      } catch (e) {
+        showError('priority', (e as Error).message);
+        prioritySelect.disabled = false;
+      }
+    });
+  });
+</script>
