@@ -35,8 +35,12 @@ export function writeManual(data: ManualData): void {
   const tmpPath = MANUAL_TMP_PATH();
   const serialized = JSON.stringify(data, null, 2) + '\n';
 
-  writeFileSync(tmpPath, serialized, 'utf-8');
-  renameSync(tmpPath, filePath);
+  try {
+    writeFileSync(tmpPath, serialized, 'utf-8');
+    renameSync(tmpPath, filePath);
+  } catch (e) {
+    throw new Error(`[manual] failed to write ${filePath}: ${(e as Error).message}`);
+  }
 }
 
 export { EMPTY_MANUAL };
