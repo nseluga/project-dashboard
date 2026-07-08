@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { readManual, writeManual } from '../../lib/manual.js';
+import { manualMutex } from '../../lib/mutex.js';
 import type { InboxItem } from '../../types/manual.js';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
@@ -32,11 +33,19 @@ export const POST: APIRoute = async ({ request }) => {
     done: false,
   };
 
-  const manual = readManual();
-  manual.inbox.push(item);
-  writeManual(manual);
-
-  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: JSON_HEADERS });
+  try {
+    return await manualMutex.runExclusive(async () => {
+      const manual = readManual();
+      manual.inbox.push(item);
+      writeManual(manual);
+      return new Response(JSON.stringify({ ok: true }), { status: 200, headers: JSON_HEADERS });
+    });
+  } catch (e) {
+    return new Response(
+      JSON.stringify({ ok: false, error: (e as Error).message }),
+      { status: 500, headers: JSON_HEADERS },
+    );
+  }
 };
 
 export const DELETE: APIRoute = async ({ request }) => {
@@ -59,18 +68,26 @@ export const DELETE: APIRoute = async ({ request }) => {
     );
   }
 
-  const manual = readManual();
-  const index = manual.inbox.findIndex((item) => item.id === id);
+  try {
+    return await manualMutex.runExclusive(async () => {
+      const manual = readManual();
+      const index = manual.inbox.findIndex((item) => item.id === id);
 
-  if (index === -1) {
+      if (index === -1) {
+        return new Response(
+          JSON.stringify({ ok: false, error: `inbox item not found: ${id}` }),
+          { status: 404, headers: JSON_HEADERS },
+        );
+      }
+
+      manual.inbox.splice(index, 1);
+      writeManual(manual);
+      return new Response(JSON.stringify({ ok: true }), { status: 200, headers: JSON_HEADERS });
+    });
+  } catch (e) {
     return new Response(
-      JSON.stringify({ ok: false, error: `inbox item not found: ${id}` }),
-      { status: 404, headers: JSON_HEADERS },
+      JSON.stringify({ ok: false, error: (e as Error).message }),
+      { status: 500, headers: JSON_HEADERS },
     );
   }
-
-  manual.inbox.splice(index, 1);
-  writeManual(manual);
-
-  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: JSON_HEADERS });
 };

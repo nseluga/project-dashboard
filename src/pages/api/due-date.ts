@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { readManual, writeManual } from '../../lib/manual.js';
+import { manualMutex } from '../../lib/mutex.js';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
@@ -30,15 +31,23 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 
-  const manual = readManual();
+  try {
+    return await manualMutex.runExclusive(async () => {
+      const manual = readManual();
 
-  if (date === null) {
-    delete manual.due_dates[projectId];
-  } else {
-    manual.due_dates[projectId] = date;
+      if (date === null) {
+        delete manual.due_dates[projectId];
+      } else {
+        manual.due_dates[projectId] = date;
+      }
+
+      writeManual(manual);
+      return new Response(JSON.stringify({ ok: true }), { status: 200, headers: JSON_HEADERS });
+    });
+  } catch (e) {
+    return new Response(
+      JSON.stringify({ ok: false, error: (e as Error).message }),
+      { status: 500, headers: JSON_HEADERS },
+    );
   }
-
-  writeManual(manual);
-
-  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: JSON_HEADERS });
 };

@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { readManual, writeManual } from '../../lib/manual.js';
+import { manualMutex } from '../../lib/mutex.js';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
@@ -37,22 +38,30 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 
-  const manual = readManual();
+  try {
+    return await manualMutex.runExclusive(async () => {
+      const manual = readManual();
 
-  if (!manual.overrides[projectId]) {
-    manual.overrides[projectId] = {};
+      if (!manual.overrides[projectId]) {
+        manual.overrides[projectId] = {};
+      }
+
+      if (value === null) {
+        delete manual.overrides[projectId][field];
+        if (Object.keys(manual.overrides[projectId]).length === 0) {
+          delete manual.overrides[projectId];
+        }
+      } else {
+        manual.overrides[projectId][field] = value;
+      }
+
+      writeManual(manual);
+      return new Response(JSON.stringify({ ok: true }), { status: 200, headers: JSON_HEADERS });
+    });
+  } catch (e) {
+    return new Response(
+      JSON.stringify({ ok: false, error: (e as Error).message }),
+      { status: 500, headers: JSON_HEADERS },
+    );
   }
-
-  if (value === null) {
-    delete manual.overrides[projectId][field];
-    if (Object.keys(manual.overrides[projectId]).length === 0) {
-      delete manual.overrides[projectId];
-    }
-  } else {
-    manual.overrides[projectId][field] = value;
-  }
-
-  writeManual(manual);
-
-  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: JSON_HEADERS });
 };
