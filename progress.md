@@ -1,51 +1,34 @@
 # Project Dashboard — Progress
 
-**Status: not started**
+> Tracks what has actually landed against [plan.md](./plan.md). Update this file (not just
+> the per-item `status` fields in plan.md) whenever an item is completed, so a fresh session
+> can tell what's done without re-auditing the codebase.
 
-This file is the execution checklist for the autonomous dev team (`dev-team-auto`). Work
-top to bottom — tasks are ordered by dependency. Update the status line above and check
-boxes as you go so this doubles as a live progress tracker. See `plan.md` for the design.
+**Last verified against code:** 2026-07-07
 
-Follow global standards in `~/.claude/skills/dev-team/code-standards.md` and the Astro
-conventions in `~/portfolio/STANDARDS.md`.
+## Where we're at (one paragraph)
 
----
+**Code:** Repo exists as a bare git repo with planning documents only — no Astro project has been scaffolded yet. The 6 project READMEs in `~/os/projects/*/` have been written with correct YAML frontmatter (done in the planning session). **Planning:** design is fully decided — tech stack, data model, API shape, and feature scope are locked in `plan.md`. No open design questions remain; every item is ready to implement in order.
 
-## Phase 0 — Inventory & scaffold
-- [x] Rewrite the 6 project READMEs in `~/os/projects/*/` with corrected status + YAML
-      frontmatter (done during the planning session).
-- [ ] Scaffold this repo as an Astro project: `@astrojs/node` (SSR, `output: 'server'`),
-      Tailwind, TypeScript. Add `gray-matter`. Wire `npm run dev` / `npm run build`.
-- [ ] Add `.env.example` with `OS_PROJECTS_DIR=~/os/projects`.
+## Status by stage
 
-## Phase 1 — Data / storage
-- [ ] `src/lib/projects.ts`: read `${OS_PROJECTS_DIR}/*/README.md`, parse frontmatter with
-      `gray-matter`, return typed `Project[]`. Skip `os-evals` (subset of os).
-- [ ] `last_active` resolver: prefer `git -C <repo> log -1 --format=%cI` when `repo` is a
-      local clone; fall back to frontmatter `last_active`. Compute `days_since_active`.
-- [ ] `src/lib/manual.ts`: safe read/merge/write helpers for `data/manual.json`
-      (`overrides`, `due_dates`, `inbox`). Create the file if missing; never partial-write.
-- [ ] Merge layer: apply `overrides` onto frontmatter; attach `due_dates`; compute `overdue`.
-- [ ] API routes: `POST /api/inbox`, `DELETE /api/inbox`, `POST /api/due-date`,
-      `POST /api/override` — validate input, persist via `manual.ts`.
+| Stage | Item | Status |
+|---|---|---|
+| pre | Project READMEs in `~/os/projects/*/` with YAML frontmatter | ✅ done (planning session) |
+| 0 | 0.1 — Initialize Astro project with dependencies | not started |
+| 0 | 0.2 — Add `.env.example` | not started |
+| 1 | 1.1 — `src/lib/projects.ts`: read frontmatter + resolve `last_active` | not started |
+| 1 | 1.2 — `src/lib/manual.ts`: safe read/write for `data/manual.json` | not started |
+| 1 | 1.3 — Merge layer: `getMergedProjects()` | not started |
+| 1 | 1.4 — API routes: inbox, due-date, override | not started |
+| 2 | 2.1 — Board page: project cards grouped by status | not started |
+| 2 | 2.2 — Collapsed "Completed" section | not started |
+| 2 | 2.3 — Inline edit controls: due date, status override, priority | not started |
+| 3 | 3.1 — Weekly digest section | not started |
+| 3 | 3.2 — Quick-capture inbox UI | not started |
+| 4 | 4.1 — Tailwind styling pass | not started |
+| 4 | 4.2 — `README.md`: how to run | not started |
 
-## Phase 2 — Core board
-- [ ] Board page (`src/pages/index.astro`): project cards grouped by status
-      (active / in-progress / on-hold), each showing status badge, priority,
-      days-since-active, next step, repo path + GitHub link.
-- [ ] Collapsed "Completed" section for `complete` / `archived`.
-- [ ] Inline edit controls: set/clear due date, override status, set priority
-      (POST to the API routes, re-render).
+## How to update this file
 
-## Phase 3 — v1 features
-- [ ] Weekly digest section: three buckets — moved (touched ≤7 days), overdue
-      (due < today), coming up (due ≤7 days out).
-- [ ] Quick-capture inbox UI: text input to add; list with check-off / delete; optional
-      project tag on an item.
-
-## Phase 4 — Polish & verify
-- [ ] Tailwind styling pass per portfolio STANDARDS (status color coding, overdue = red).
-- [ ] `README.md`: how to run (`npm install`, set `OS_PROJECTS_DIR`, `npm run dev`).
-- [ ] Manual verification: `npm run dev`, load the board and confirm all 6 projects render
-      with correct statuses; add an inbox item and reload (persists); set a due date in the
-      past and confirm it shows overdue and lands in the digest's "overdue" bucket.
+After finishing a plan item: flip its row to `done [track] — [one-line summary + commit hash]` and update the matching `status:` field in `plan.md` to keep both in sync.
