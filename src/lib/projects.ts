@@ -1,5 +1,5 @@
 import { readdir, readFile } from 'fs/promises';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { homedir } from 'os';
 import { join } from 'path';
 import matter from 'gray-matter';
@@ -18,8 +18,9 @@ function expandTilde(p: string): string {
 
 function gitLastCommit(repoPath: string): string | null {
   try {
-    const output = execSync(
-      `git -C "${repoPath}" log -1 --format=%cI`,
+    const output = execFileSync(
+      'git',
+      ['-C', repoPath, 'log', '-1', '--format=%cI'],
       { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], timeout: GIT_TIMEOUT_MS },
     ).trim();
     return output.length > 0 ? output : null;
@@ -44,13 +45,24 @@ export async function getProjects(): Promise<Project[]> {
     let content: string;
     try {
       content = await readFile(readmePath, 'utf-8');
-    } catch {
-      continue; // directory has no README.md — skip silently
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code === 'ENOENT') {
+        continue; // directory has no README.md — skip silently
+      }
+      console.warn(`[projects] unexpected error reading ${readmePath}:`, (e as Error).message);
+      continue;
     }
 
-    const { data: fm } = matter(content);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let fm: { [key: string]: any };
+    try {
+      ({ data: fm } = matter(content));
+    } catch (e) {
+      console.warn(`[projects] failed to parse frontmatter in ${readmePath}:`, (e as Error).message);
+      continue;
+    }
 
-    const repoRaw: string | null = fm.repo ?? null;
+    const repoRaw: string | null = (fm.repo as string) ?? null;
     const repoExpanded = repoRaw ? expandTilde(repoRaw) : null;
 
     const gitDate = repoExpanded ? gitLastCommit(repoExpanded) : null;
@@ -74,7 +86,7 @@ export async function getProjects(): Promise<Project[]> {
       summary: fm.summary ?? null,
       repo: repoRaw,
       github: fm.github ?? null,
-      tags: Array.isArray(fm.tags) ? fm.tags : [],
+      tags: Array.isArray(fm.tags) ? fm.tags.filter((t): t is string => typeof t === 'string') : [],
       status: fm.status ?? 'unknown',
       priority: fm.priority ?? 'low',
       next_step: fm.next_step ?? null,
