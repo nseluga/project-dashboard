@@ -122,6 +122,29 @@ describe('computeDigestBuckets()', () => {
       expect(comingUp).toHaveLength(0);
     });
 
+    it('excludes a project with a past due_date and overdue = false', () => {
+      // Important fix (review): lower-bound guard ensures past-due projects not flagged
+      // overdue do not silently appear in "Coming up".
+      const yesterday = '2026-07-07';
+      const projects = [
+        makeProject({ id: 'past-not-flagged', due_date: yesterday, overdue: false }),
+      ];
+      const { comingUp } = computeDigestBuckets(projects, TODAY, SEVEN_DAYS);
+      expect(comingUp).toHaveLength(0);
+    });
+
+    it('excludes a project with a malformed due_date (MM/DD/YYYY format) from all buckets', () => {
+      // Important fix (review): non-YYYY-MM-DD due_date values are normalised to null
+      // before any comparison, preventing wrong bucket placement.
+      const projects = [
+        makeProject({ id: 'malformed', due_date: '07/08/2026', overdue: false }),
+      ];
+      const { moved, overdue, comingUp } = computeDigestBuckets(projects, TODAY, SEVEN_DAYS);
+      expect(moved).toHaveLength(0);   // days_since_active defaults to 10 (> 7)
+      expect(overdue).toHaveLength(0);
+      expect(comingUp).toHaveLength(0);
+    });
+
     it('excludes a project with no due_date', () => {
       const projects = [makeProject({ id: 'nodate2', due_date: null, overdue: false })];
       const { comingUp } = computeDigestBuckets(projects, TODAY, SEVEN_DAYS);
