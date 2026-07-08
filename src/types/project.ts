@@ -15,3 +15,10 @@ export interface Project {
   /** Days elapsed since last_active, non-negative */
   days_since_active: number;
 }
+
+export interface MergedProject extends Project {
+  /** YYYY-MM-DD due date from manual.json, or null if not set */
+  due_date: string | null;
+  /** true when due_date is present and strictly before today */
+  overdue: boolean;
+}
