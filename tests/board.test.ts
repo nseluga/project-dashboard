@@ -477,3 +477,198 @@ describe('Behavioral: rendered HTML from dev server', () => {
     expect(html).not.toContain('500 Internal Server Error');
   });
 });
+
+// ── Item 2.2: Unit — index.astro source — collapsed completed section ──────────
+
+describe('Item 2.2: index.astro source — collapsed completed section', () => {
+  let indexSource: string;
+
+  beforeEach(() => {
+    indexSource = readFileSync(resolve(ROOT, 'src/pages/index.astro'), 'utf-8');
+  });
+
+  it('source defines COLLAPSED_STATUSES including "complete"', () => {
+    expect(indexSource).toMatch(/COLLAPSED_STATUSES/);
+    expect(indexSource).toMatch(/complete/);
+  });
+
+  it('source uses early-continue guard to prevent complete/archived projects from entering main buckets', () => {
+    // The early-continue before bucket assignment is the enforcement mechanism
+    expect(indexSource).toMatch(/COLLAPSED_STATUSES\.has/);
+    expect(indexSource).toMatch(/continue/);
+  });
+
+  it('source renders a native <details> element (no JS) for the completed section', () => {
+    expect(indexSource).toMatch(/<details/);
+    // Must NOT have the `open` attribute (collapsed by default)
+    expect(indexSource).not.toMatch(/<details[^>]*\bopen\b/);
+  });
+
+  it('source wraps completed section in <details>/<summary> without any JS event listeners', () => {
+    // The <details> must not attach click/toggle listeners via addEventListener
+    expect(indexSource).not.toMatch(/addEventListener.*toggle/);
+    expect(indexSource).not.toMatch(/addEventListener.*click/);
+  });
+
+  it('summary text shows count via completedProjects.length', () => {
+    expect(indexSource).toMatch(/completedProjects\.length/);
+    expect(indexSource).toMatch(/Completed/);
+  });
+
+  it('completed section renders ProjectCard for each completed project', () => {
+    // Must iterate completedProjects and pass to ProjectCard
+    expect(indexSource).toMatch(/completedProjects\.map/);
+    // Must use ProjectCard inside the details/completed block
+    const detailsMatch = indexSource.match(/<details[\s\S]*?<\/details>/);
+    expect(detailsMatch, '<details> block not found in source').toBeTruthy();
+    expect(detailsMatch![0]).toContain('ProjectCard');
+  });
+
+  it('completed section grid uses the same layout classes as main board', () => {
+    // Same grid as the main board for visual consistency
+    const detailsMatch = indexSource.match(/<details[\s\S]*?<\/details>/);
+    expect(detailsMatch, '<details> block not found in source').toBeTruthy();
+    expect(detailsMatch![0]).toMatch(/grid-cols-1.*gap-4.*sm:grid-cols-2.*lg:grid-cols-3/);
+  });
+});
+
+// ── Item 2.2: Unit — bucket grouping excludes complete/archived ───────────────
+
+describe('Item 2.2: bucket grouping excludes complete and archived projects', () => {
+  /** Replicate the COLLAPSED_STATUSES guard from index.astro */
+  function groupWithCollapsedGuard(projects: { status: string; id: string }[]) {
+    const COLLAPSED_STATUSES = new Set(['complete', 'archived']);
+    const buckets: Record<string, typeof projects> = {
+      active: [],
+      'in-progress': [],
+      'on-hold': [],
+    };
+    const completed: typeof projects = [];
+    for (const p of projects) {
+      if (COLLAPSED_STATUSES.has(p.status)) {
+        completed.push(p);
+        continue;
+      }
+      if (p.status in buckets) buckets[p.status].push(p);
+    }
+    return { buckets, completed };
+  }
+
+  it('complete project is routed to completedProjects, not any main bucket', () => {
+    const { buckets, completed } = groupWithCollapsedGuard([
+      { id: 'nba-shot-value', status: 'complete' },
+      { id: 'os', status: 'active' },
+    ]);
+    expect(completed.map((p) => p.id)).toContain('nba-shot-value');
+    const allMainIds = [...buckets.active, ...buckets['in-progress'], ...buckets['on-hold']].map((p) => p.id);
+    expect(allMainIds).not.toContain('nba-shot-value');
+  });
+
+  it('archived project is routed to completedProjects, not any main bucket', () => {
+    const { buckets, completed } = groupWithCollapsedGuard([
+      { id: 'old-project', status: 'archived' },
+      { id: 'patio', status: 'active' },
+    ]);
+    expect(completed.map((p) => p.id)).toContain('old-project');
+    const allMainIds = [...buckets.active, ...buckets['in-progress'], ...buckets['on-hold']].map((p) => p.id);
+    expect(allMainIds).not.toContain('old-project');
+  });
+
+  it('active/in-progress/on-hold projects still reach their correct buckets when complete projects are present', () => {
+    const { buckets, completed } = groupWithCollapsedGuard([
+      { id: 'os', status: 'active' },
+      { id: 'patio', status: 'active' },
+      { id: 'portfolio-website', status: 'in-progress' },
+      { id: 'pitcher-injury-risk', status: 'on-hold' },
+      { id: 'batting-average-ability', status: 'on-hold' },
+      { id: 'nba-shot-value', status: 'complete' },
+    ]);
+    expect(buckets.active.map((p) => p.id)).toEqual(['os', 'patio']);
+    expect(buckets['in-progress'].map((p) => p.id)).toEqual(['portfolio-website']);
+    expect(buckets['on-hold'].map((p) => p.id)).toEqual(['pitcher-injury-risk', 'batting-average-ability']);
+    expect(completed.map((p) => p.id)).toEqual(['nba-shot-value']);
+  });
+});
+
+// ── Item 2.2: Behavioral — live HTML confirms collapsed section ───────────────
+
+describe('Item 2.2: Behavioral — collapsed completed section in rendered HTML', () => {
+  let html: string;
+
+  beforeEach(async () => {
+    const result = await fetchPage();
+    if (!result) {
+      throw new Error(`Dev server not reachable at ${BASE_URL} — start with \`npm run dev\``);
+    }
+    html = result;
+  });
+
+  it('<details> element is present in the rendered HTML', () => {
+    expect(html).toContain('<details');
+  });
+
+  it('<details> element does NOT have the "open" attribute (collapsed by default)', () => {
+    // Match the opening <details> tag and ensure it has no "open" attribute
+    const detailsTagMatch = html.match(/<details[^>]*>/);
+    expect(detailsTagMatch, '<details> tag not found').toBeTruthy();
+    expect(detailsTagMatch![0]).not.toMatch(/\bopen\b/);
+  });
+
+  it('<details> contains "NBA Shot Value" inside — visible when expanded', () => {
+    const detailsMatch = html.match(/<details[^>]*>([\s\S]*?)<\/details>/);
+    expect(detailsMatch, '<details> block not found').toBeTruthy();
+    expect(detailsMatch![1]).toContain('NBA Shot Value');
+  });
+
+  it('<details> inner content uses ProjectCard <article> layout', () => {
+    const detailsMatch = html.match(/<details[^>]*>([\s\S]*?)<\/details>/);
+    expect(detailsMatch, '<details> block not found').toBeTruthy();
+    const inner = detailsMatch![1];
+    // ProjectCard renders an <article> element
+    expect(inner).toContain('<article');
+    // And a grid wrapper
+    expect(inner).toMatch(/grid-cols-1/);
+  });
+
+  it('nba-shot-value does NOT appear in the active section HTML', () => {
+    const activeMatch = html.match(
+      /<section[^>]*aria-labelledby="section-active"[^>]*>([\s\S]*?)<\/section>/
+    );
+    expect(activeMatch, 'active section not found').toBeTruthy();
+    expect(activeMatch![1].toLowerCase()).not.toContain('nba');
+    expect(activeMatch![1].toLowerCase()).not.toContain('shot value');
+  });
+
+  it('nba-shot-value does NOT appear in the in-progress section HTML', () => {
+    const match = html.match(
+      /<section[^>]*aria-labelledby="section-in-progress"[^>]*>([\s\S]*?)<\/section>/
+    );
+    expect(match, 'in-progress section not found').toBeTruthy();
+    expect(match![1].toLowerCase()).not.toContain('nba');
+    expect(match![1].toLowerCase()).not.toContain('shot value');
+  });
+
+  it('nba-shot-value does NOT appear in the on-hold section HTML', () => {
+    const match = html.match(
+      /<section[^>]*aria-labelledby="section-on-hold"[^>]*>([\s\S]*?)<\/section>/
+    );
+    expect(match, 'on-hold section not found').toBeTruthy();
+    expect(match![1].toLowerCase()).not.toContain('nba');
+    expect(match![1].toLowerCase()).not.toContain('shot value');
+  });
+
+  it('no <script> block attaches event listeners to the <details> element (pure native HTML)', () => {
+    // Extract all inline <script> blocks and verify none mention details/toggle/expand
+    const scriptContents = [...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+    for (const script of scriptContents) {
+      expect(script.toLowerCase()).not.toMatch(/addeventlistener.*toggle/);
+      expect(script.toLowerCase()).not.toMatch(/addeventlistener.*click.*detail/);
+    }
+  });
+
+  it('summary element shows "Completed (1)" with the count', () => {
+    const summaryMatch = html.match(/<summary[^>]*>([\s\S]*?)<\/summary>/);
+    expect(summaryMatch, '<summary> not found').toBeTruthy();
+    expect(summaryMatch![1]).toMatch(/Completed\s*\(\s*1\s*\)/);
+  });
+});
