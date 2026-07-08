@@ -26,6 +26,11 @@ const priorityClass = project.priority ? (priorityColors[project.priority] ?? 'b
 const cardBorder = project.overdue
   ? 'border-2 border-red-400 bg-red-50'
   : 'border border-gray-200 bg-white';
+
+const safeGithub =
+  project.github?.startsWith('http://') || project.github?.startsWith('https://')
+    ? project.github
+    : null;
 ---
 
 <article class={`rounded-lg p-4 shadow-sm flex flex-col gap-3 ${cardBorder}`}>
@@ -71,15 +76,19 @@ const cardBorder = project.overdue
     {project.github && (
       <div>
         <span class="text-xs font-semibold uppercase tracking-wide text-gray-400">GitHub</span>
-        <a
-          href={project.github}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={`${project.name} on GitHub (opens in new tab)`}
-          class="text-blue-600 hover:text-blue-800 underline text-xs mt-0.5 inline-block"
-        >
-          {project.github}
-        </a>
+        {safeGithub ? (
+          <a
+            href={safeGithub}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`${project.name} on GitHub (opens in new tab)`}
+            class="text-blue-600 hover:text-blue-800 underline text-xs mt-0.5 inline-block"
+          >
+            {safeGithub}
+          </a>
+        ) : (
+          <p class="text-xs text-gray-500 mt-0.5">{project.github}</p>
+        )}
       </div>
     )}
   </div>

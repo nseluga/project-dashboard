@@ -75,10 +75,8 @@ export async function getProjects(): Promise<Project[]> {
       : null;
     const last_active = gitDate ?? frontmatterDate ?? new Date().toISOString();
 
-    const days_since_active = Math.max(
-      0,
-      Math.floor((Date.now() - new Date(last_active).getTime()) / MS_PER_DAY),
-    );
+    const rawDays = Math.floor((Date.now() - new Date(last_active).getTime()) / MS_PER_DAY);
+    const days_since_active = Number.isFinite(rawDays) ? Math.max(0, rawDays) : 0;
 
     projects.push({
       id: dirName,

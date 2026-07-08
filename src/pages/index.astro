@@ -3,7 +3,14 @@ import { getMergedProjects } from '../lib/merge.js';
 import ProjectCard from '../components/ProjectCard.astro';
 import type { MergedProject } from '../types/project.js';
 
-const allProjects = await getMergedProjects();
+let allProjects: MergedProject[] = [];
+let loadError = false;
+try {
+  allProjects = await getMergedProjects();
+} catch (err) {
+  console.error('[dashboard] getMergedProjects() failed:', err);
+  loadError = true;
+}
 
 const BOARD_STATUSES = ['active', 'in-progress', 'on-hold'] as const;
 
@@ -40,6 +47,12 @@ const sectionLabels: Record<typeof BOARD_STATUSES[number], string> = {
         <h1 class="text-2xl font-bold text-gray-900">Project Dashboard</h1>
         <p class="text-sm text-gray-500 mt-1">What am I working on, where does it stand, and what's due when.</p>
       </header>
+
+      {loadError && (
+        <div class="bg-red-100 text-red-800 p-4 mb-4 rounded">
+          Failed to load projects. Check OS_PROJECTS_DIR and data/manual.json.
+        </div>
+      )}
 
       <main class="flex flex-col gap-10">
         {BOARD_STATUSES.map((status) => {
