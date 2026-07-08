@@ -4,6 +4,8 @@ import { manualMutex } from '../../lib/mutex.js';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
+const ALLOWED_OVERRIDE_FIELDS = new Set(['name', 'summary', 'status', 'priority', 'next_step', 'repo', 'github']);
+
 export const POST: APIRoute = async ({ request }) => {
   let body: unknown;
   try {
@@ -27,6 +29,13 @@ export const POST: APIRoute = async ({ request }) => {
   if (typeof field !== 'string' || field.trim() === '') {
     return new Response(
       JSON.stringify({ ok: false, error: 'missing required field: field' }),
+      { status: 400, headers: JSON_HEADERS },
+    );
+  }
+
+  if (!ALLOWED_OVERRIDE_FIELDS.has(field)) {
+    return new Response(
+      JSON.stringify({ ok: false, error: 'Invalid field' }),
       { status: 400, headers: JSON_HEADERS },
     );
   }

@@ -31,6 +31,13 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 
+  if (date !== null && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return new Response(
+      JSON.stringify({ ok: false, error: 'date must be YYYY-MM-DD' }),
+      { status: 400, headers: JSON_HEADERS },
+    );
+  }
+
   try {
     return await manualMutex.runExclusive(async () => {
       const manual = readManual();

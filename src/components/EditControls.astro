@@ -145,14 +145,26 @@ const currentPriority = project.priority ?? '__reset__';
     }
 
     async function postJson(url: string, body: Record<string, unknown>): Promise<void> {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({})) as Record<string, unknown>;
-        throw new Error((data.error as string) ?? `HTTP ${res.status}`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({})) as Record<string, unknown>;
+          throw new Error((data.error as string) ?? `HTTP ${res.status}`);
+        }
+      } catch (e) {
+        if ((e as Error).name === 'AbortError') {
+          throw new Error('Request timed out');
+        }
+        throw e;
+      } finally {
+        clearTimeout(timeoutId);
       }
     }
 
@@ -160,10 +172,10 @@ const currentPriority = project.priority ?? '__reset__';
     const dateInput = panel.querySelector<HTMLInputElement>(`#due-date-${projectId}`);
     const setBtn = panel.querySelector<HTMLButtonElement>('[data-action="set-due-date"]');
     const clearBtn = panel.querySelector<HTMLButtonElement>('[data-action="clear-due-date"]');
+    const dueDateControls = [dateInput, setBtn, clearBtn].filter(Boolean) as Element[];
 
     setBtn?.addEventListener('click', async () => {
       clearError('due-date');
-      const dueDateControls = [dateInput, setBtn, clearBtn].filter(Boolean) as Element[];
       setDisabled(dueDateControls, true);
       try {
         const dateVal = dateInput?.value?.trim() ?? '';
@@ -177,7 +189,6 @@ const currentPriority = project.priority ?? '__reset__';
 
     clearBtn?.addEventListener('click', async () => {
       clearError('due-date');
-      const dueDateControls = [dateInput, setBtn, clearBtn].filter(Boolean) as Element[];
       setDisabled(dueDateControls, true);
       try {
         await postJson('/api/due-date', { projectId, date: null });
