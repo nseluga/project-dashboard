@@ -10,7 +10,8 @@
     "test:projects": "vitest run tests/projects.test.ts",
     "test:manual": "vitest run tests/manual.test.ts",
     "test:merge": "vitest run tests/merge.test.ts",
-    "test:api": "vitest run tests/api.test.ts"
+    "test:api": "vitest run tests/api.test.ts",
+    "test:digest": "vitest run tests/digest.test.ts"
   },
   "dependencies": {
     "async-mutex": "^0.5.0",

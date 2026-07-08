@@ -1,6 +1,7 @@
 ---
 import { getMergedProjects } from '../lib/merge.js';
 import ProjectCard from '../components/ProjectCard.astro';
+import WeeklyDigest from '../components/WeeklyDigest.astro';
 import type { MergedProject } from '../types/project.js';
 
 let allProjects: MergedProject[] = [];
@@ -60,6 +61,8 @@ const sectionLabels: Record<typeof BOARD_STATUSES[number], string> = {
           Failed to load projects. Check OS_PROJECTS_DIR and data/manual.json.
         </div>
       )}
+
+      <WeeklyDigest projects={allProjects} />
 
       <main class="flex flex-col gap-10">
         {BOARD_STATUSES.map((status) => {
