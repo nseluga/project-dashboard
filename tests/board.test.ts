@@ -262,6 +262,91 @@ describe('index.astro source — board section structure', () => {
   });
 });
 
+// ── Unit: Fix verification — javascript: URI guard ───────────────────────────
+
+describe('Fix 2.1-Important-1: javascript: URI in github field renders as plain text', () => {
+  it('safeGithub logic blocks javascript: URIs', () => {
+    // Replicate the safeGithub computation from ProjectCard.astro line 30-33
+    function computeSafeGithub(github: string | null | undefined): string | null {
+      return github?.startsWith('http://') || github?.startsWith('https://')
+        ? github
+        : null;
+    }
+
+    // javascript: URI must be nullified
+    expect(computeSafeGithub('javascript:alert(1)')).toBeNull();
+    expect(computeSafeGithub('javascript:void(0)')).toBeNull();
+    // data: URI must also be blocked
+    expect(computeSafeGithub('data:text/html,<h1>hi</h1>')).toBeNull();
+    // Valid URLs pass through
+    expect(computeSafeGithub('https://github.com/nseluga/os')).toBe('https://github.com/nseluga/os');
+    expect(computeSafeGithub('http://github.com/foo')).toBe('http://github.com/foo');
+    // null/undefined returns null
+    expect(computeSafeGithub(null)).toBeNull();
+    expect(computeSafeGithub(undefined)).toBeNull();
+  });
+
+  it('ProjectCard.astro source: safeGithub computed before href; <a> uses safeGithub not project.github', () => {
+    const cardSource = readFileSync(resolve(ROOT, 'src/components/ProjectCard.astro'), 'utf-8');
+    // safeGithub must be declared in the frontmatter
+    expect(cardSource).toMatch(/const safeGithub/);
+    // The anchor href must reference safeGithub, not project.github directly
+    expect(cardSource).toMatch(/href=\{safeGithub\}/);
+    // project.github must NOT be used directly as href
+    expect(cardSource).not.toMatch(/href=\{project\.github\}/);
+  });
+
+  it('ProjectCard.astro source: non-https github value renders as <p>, not <a>', () => {
+    const cardSource = readFileSync(resolve(ROOT, 'src/components/ProjectCard.astro'), 'utf-8');
+    // Must have a fallback <p> element for non-safe values
+    expect(cardSource).toMatch(/project\.github\}/);
+    // The <p> fallback should appear alongside the conditional safeGithub check
+    expect(cardSource).toMatch(/safeGithub\s*\?\s*\(/);
+    expect(cardSource).toMatch(/<p[^>]*>\{project\.github\}<\/p>/);
+  });
+});
+
+// ── Unit: Fix verification — getMergedProjects() error boundary ───────────────
+
+describe('Fix 2.1-Important-2: getMergedProjects() error falls back gracefully', () => {
+  it('index.astro source: getMergedProjects() is wrapped in try/catch', () => {
+    const indexSource = readFileSync(resolve(ROOT, 'src/pages/index.astro'), 'utf-8');
+    // Must have a try block containing getMergedProjects
+    expect(indexSource).toMatch(/try\s*\{/);
+    expect(indexSource).toMatch(/getMergedProjects/);
+    expect(indexSource).toMatch(/catch/);
+  });
+
+  it('index.astro source: loadError flag set to true in catch block', () => {
+    const indexSource = readFileSync(resolve(ROOT, 'src/pages/index.astro'), 'utf-8');
+    expect(indexSource).toMatch(/loadError\s*=\s*true/);
+  });
+
+  it('index.astro source: allProjects initialized to empty array before try block', () => {
+    const indexSource = readFileSync(resolve(ROOT, 'src/pages/index.astro'), 'utf-8');
+    // Must fall back to empty array if getMergedProjects() throws
+    expect(indexSource).toMatch(/allProjects.*=.*\[\]/);
+  });
+
+  it('index.astro source: error banner rendered when loadError is true', () => {
+    const indexSource = readFileSync(resolve(ROOT, 'src/pages/index.astro'), 'utf-8');
+    // Error banner must be conditional on loadError
+    expect(indexSource).toMatch(/loadError/);
+    // Banner must use red styling
+    expect(indexSource).toMatch(/bg-red-100/);
+    // Banner must include a helpful error message
+    expect(indexSource).toMatch(/Failed to load/);
+  });
+
+  it('getMergedProjects() throws when getProjects() rejects, confirming the error boundary is necessary', async () => {
+    mockGetProjects.mockRejectedValue(new Error('OS_PROJECTS_DIR not set'));
+    mockReadManual.mockReturnValue(makeManual());
+
+    // getMergedProjects itself should propagate the error (index.astro catches it)
+    await expect(getMergedProjects()).rejects.toThrow('OS_PROJECTS_DIR not set');
+  });
+});
+
 // ── Behavioral: hit the running dev server ────────────────────────────────────
 
 const DEV_PORT = 4322;
