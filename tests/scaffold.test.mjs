@@ -68,6 +68,37 @@ test('npm run build exits cleanly (exit code 0)', () => {
   );
 });
 
+// --- Fix check 1: gray-matter must be in dependencies, not devDependencies ---
+test('gray-matter is in dependencies (not devDependencies)', () => {
+  const pkgPath = path.join(ROOT, 'package.json');
+  const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+  assert.ok(
+    pkg.dependencies && 'gray-matter' in pkg.dependencies,
+    'gray-matter must be in dependencies (runtime), not devDependencies'
+  );
+  assert.ok(
+    !(pkg.devDependencies && 'gray-matter' in pkg.devDependencies),
+    'gray-matter must NOT be in devDependencies'
+  );
+});
+
+// --- Fix check 2: tailwind.config.cjs glob must be {astro,ts}, not {astro,ts,tsx} ---
+test('tailwind.config.cjs content glob is {astro,ts} without tsx', () => {
+  const twPath = path.join(ROOT, 'tailwind.config.cjs');
+  assert.ok(existsSync(twPath), 'tailwind.config.cjs must exist');
+  const config = readFileSync(twPath, 'utf-8');
+  assert.match(
+    config,
+    /\{astro,ts\}/,
+    'content glob must use {astro,ts}'
+  );
+  assert.doesNotMatch(
+    config,
+    /\{astro,ts,tsx\}/,
+    'content glob must NOT include tsx'
+  );
+});
+
 // --- Criterion 5 (behavioral): dev server starts without errors ---
 // This criterion is covered by the behavioral check (dev server actually started at
 // localhost:4322 and served HTML with <h1>Project Dashboard</h1>), confirmed
