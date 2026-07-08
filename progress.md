@@ -15,8 +15,8 @@
 | Stage | Item | Status |
 |---|---|---|
 | pre | Project READMEs in `~/os/projects/*/` with YAML frontmatter | ✅ done (planning session) |
-| 0 | 0.1 — Initialize Astro project with dependencies | not started |
-| 0 | 0.2 — Add `.env.example` | not started |
+| 0 | 0.1 — Initialize Astro project with dependencies | done full — Astro 5 SSR scaffold with Node adapter, Tailwind, gray-matter in dependencies, 7-test suite passing (4debf06) |
+| 0 | 0.2 — Add `.env.example` | done trivial — .env.example with OS_PROJECTS_DIR, .env confirmed gitignored (088d88d) |
 | 1 | 1.1 — `src/lib/projects.ts`: read frontmatter + resolve `last_active` | not started |
 | 1 | 1.2 — `src/lib/manual.ts`: safe read/write for `data/manual.json` | not started |
 | 1 | 1.3 — Merge layer: `getMergedProjects()` | not started |

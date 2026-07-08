@@ -18,7 +18,7 @@
 ## STAGE 0 — Scaffold
 
 ### 0.1 — Initialize Astro project with required dependencies
-- **status:** not started
+- **status:** done
 - **track:** full
 - **owns_files:** `package.json`, `astro.config.mjs`, `tailwind.config.cjs`, `tsconfig.json`, `src/` (skeleton), `.gitignore`
 - **blocked_by:** none
@@ -27,7 +27,7 @@
 - **done when:** `npm install && npm run dev` starts the Astro dev server at `localhost:4321` without errors; `astro.config.mjs` has `output: 'server'` with the Node adapter; `gray-matter` is in `package.json`; the index page renders; `npm run build` exits cleanly.
 
 ### 0.2 — Add `.env.example`
-- **status:** not started
+- **status:** done
 - **track:** trivial
 - **owns_files:** `.env.example`
 - **blocked_by:** 0.1
