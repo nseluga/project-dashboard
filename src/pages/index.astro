@@ -1,5 +1,32 @@
 ---
+import { getMergedProjects } from '../lib/merge.js';
+import ProjectCard from '../components/ProjectCard.astro';
+import type { MergedProject } from '../types/project.js';
+
+const allProjects = await getMergedProjects();
+
+const BOARD_STATUSES = ['active', 'in-progress', 'on-hold'] as const;
+
+const buckets: Record<typeof BOARD_STATUSES[number], MergedProject[]> = {
+  active: [],
+  'in-progress': [],
+  'on-hold': [],
+};
+
+for (const project of allProjects) {
+  const s = project.status as typeof BOARD_STATUSES[number];
+  if (s in buckets) {
+    buckets[s].push(project);
+  }
+}
+
+const sectionLabels: Record<typeof BOARD_STATUSES[number], string> = {
+  active: 'Active',
+  'in-progress': 'In Progress',
+  'on-hold': 'On Hold',
+};
 ---
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -7,7 +34,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Project Dashboard</title>
   </head>
-  <body>
-    <h1>Project Dashboard</h1>
+  <body class="bg-gray-50 min-h-screen text-gray-900">
+    <div class="max-w-5xl mx-auto px-4 py-8">
+      <header class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900">Project Dashboard</h1>
+        <p class="text-sm text-gray-500 mt-1">What am I working on, where does it stand, and what's due when.</p>
+      </header>
+
+      <main class="flex flex-col gap-10">
+        {BOARD_STATUSES.map((status) => {
+          const projects = buckets[status];
+          return (
+            <section aria-labelledby={`section-${status}`}>
+              <div class="flex items-center gap-3 mb-4">
+                <h2
+                  id={`section-${status}`}
+                  class="text-lg font-semibold text-gray-800"
+                >
+                  {sectionLabels[status]}
+                </h2>
+                <span class="text-sm text-gray-500 font-normal">
+                  ({projects.length})
+                </span>
+              </div>
+
+              {projects.length === 0 ? (
+                <p class="text-sm text-gray-400 italic">No projects.</p>
+              ) : (
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {projects.map((project) => (
+                    <ProjectCard project={project} />
+                  ))}
+                </div>
+              )}
+            </section>
+          );
+        })}
+      </main>
+    </div>
   </body>
 </html>

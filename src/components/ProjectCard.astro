@@ -1,0 +1,93 @@
+---
+import type { MergedProject } from '../types/project.js';
+
+interface Props {
+  project: MergedProject;
+}
+
+const { project } = Astro.props;
+
+const statusColors: Record<string, string> = {
+  active: 'bg-green-100 text-green-800',
+  'in-progress': 'bg-blue-100 text-blue-800',
+  'on-hold': 'bg-amber-100 text-amber-800',
+  complete: 'bg-gray-100 text-gray-700',
+};
+
+const priorityColors: Record<string, string> = {
+  high: 'bg-red-100 text-red-700',
+  medium: 'bg-yellow-100 text-yellow-700',
+  low: 'bg-gray-100 text-gray-500',
+};
+
+const statusClass = statusColors[project.status] ?? 'bg-gray-100 text-gray-700';
+const priorityClass = project.priority ? (priorityColors[project.priority] ?? 'bg-gray-100 text-gray-500') : null;
+
+const cardBorder = project.overdue
+  ? 'border-2 border-red-400 bg-red-50'
+  : 'border border-gray-200 bg-white';
+---
+
+<article class={`rounded-lg p-4 shadow-sm flex flex-col gap-3 ${cardBorder}`}>
+  <!-- Header row: name + badges -->
+  <div class="flex flex-wrap items-center gap-2">
+    <h3 class="text-base font-semibold text-gray-900 mr-1">{project.name}</h3>
+    <span class={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusClass}`}>
+      {project.status}
+    </span>
+    {priorityClass && (
+      <span class={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${priorityClass}`}>
+        {project.priority}
+      </span>
+    )}
+    {project.overdue && (
+      <span class="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-red-200 text-red-800">
+        overdue
+      </span>
+    )}
+  </div>
+
+  <!-- Days since active -->
+  <p class="text-sm text-gray-500">
+    Last active: <span class="font-medium text-gray-700">{project.days_since_active} days ago</span>
+  </p>
+
+  <!-- Next step -->
+  {project.next_step && (
+    <div>
+      <span class="text-xs font-semibold uppercase tracking-wide text-gray-400">Next step</span>
+      <p class="text-sm text-gray-800 mt-0.5">{project.next_step}</p>
+    </div>
+  )}
+
+  <!-- Repo + GitHub -->
+  <div class="flex flex-col gap-1 text-sm">
+    {project.repo && (
+      <div>
+        <span class="text-xs font-semibold uppercase tracking-wide text-gray-400">Repo</span>
+        <p class="font-mono text-gray-700 text-xs mt-0.5">{project.repo}</p>
+      </div>
+    )}
+    {project.github && (
+      <div>
+        <span class="text-xs font-semibold uppercase tracking-wide text-gray-400">GitHub</span>
+        <a
+          href={project.github}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`${project.name} on GitHub (opens in new tab)`}
+          class="text-blue-600 hover:text-blue-800 underline text-xs mt-0.5 inline-block"
+        >
+          {project.github}
+        </a>
+      </div>
+    )}
+  </div>
+
+  <!-- Due date (if set) -->
+  {project.due_date && (
+    <p class={`text-xs font-medium ${project.overdue ? 'text-red-700' : 'text-gray-500'}`}>
+      Due: {project.due_date}
+    </p>
+  )}
+</article>
