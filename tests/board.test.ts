@@ -1,0 +1,394 @@
+/**
+ * QA tests for Item 2.1 — Board page: project cards grouped by status
+ *
+ * Tests:
+ *  - Bucket grouping logic (active / in-progress / on-hold)
+ *  - nba-shot-value (status: complete) excluded from main buckets
+ *  - ProjectCard renders all required fields
+ *  - Overdue markup conditional is wired correctly in source
+ *  - Behavioral checks against the running dev server (port 4322)
+ */
+
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import type { Project } from '../src/types/project.js';
+import type { ManualData } from '../src/types/manual.js';
+
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function makeProject(overrides: Partial<Project> = {}): Project {
+  return {
+    id: 'test-project',
+    name: 'Test Project',
+    summary: null,
+    repo: null,
+    github: null,
+    tags: [],
+    status: 'active',
+    priority: 'medium',
+    next_step: null,
+    last_active: '2026-07-01T00:00:00.000Z',
+    days_since_active: 7,
+    ...overrides,
+  };
+}
+
+function makeManual(overrides: Partial<ManualData> = {}): ManualData {
+  return {
+    overrides: {},
+    due_dates: {},
+    inbox: [],
+    ...overrides,
+  };
+}
+
+// ── Unit: bucket grouping logic ───────────────────────────────────────────────
+
+vi.mock('../src/lib/projects.js', () => ({ getProjects: vi.fn() }));
+vi.mock('../src/lib/manual.js', () => ({ readManual: vi.fn() }));
+
+const { getMergedProjects } = await import('../src/lib/merge.js');
+const { getProjects } = await import('../src/lib/projects.js');
+const { readManual } = await import('../src/lib/manual.js');
+
+const mockGetProjects = vi.mocked(getProjects);
+const mockReadManual = vi.mocked(readManual);
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+describe('Board page bucket grouping', () => {
+  const BOARD_STATUSES = ['active', 'in-progress', 'on-hold'] as const;
+
+  /** Simulate the grouping logic from index.astro */
+  function groupIntoBuckets(projects: { status: string; id: string; name: string }[]) {
+    const buckets: Record<string, typeof projects> = {
+      active: [],
+      'in-progress': [],
+      'on-hold': [],
+    };
+    for (const p of projects) {
+      if (p.status in buckets) buckets[p.status].push(p);
+    }
+    return buckets;
+  }
+
+  it('active bucket contains os and patio', async () => {
+    mockGetProjects.mockResolvedValue([
+      makeProject({ id: 'os', name: 'os', status: 'active' }),
+      makeProject({ id: 'patio', name: 'Patio', status: 'active' }),
+      makeProject({ id: 'portfolio-website', name: 'Portfolio Website', status: 'in-progress' }),
+      makeProject({ id: 'pitcher-injury-risk', name: 'Pitcher Injury Risk', status: 'on-hold' }),
+      makeProject({ id: 'batting-average-ability', name: 'Batting Average Ability', status: 'on-hold' }),
+      makeProject({ id: 'nba-shot-value', name: 'NBA Shot Value', status: 'complete' }),
+    ]);
+    mockReadManual.mockReturnValue(makeManual());
+
+    const merged = await getMergedProjects();
+    const buckets = groupIntoBuckets(merged);
+
+    const activeIds = buckets['active'].map((p) => p.id);
+    expect(activeIds).toContain('os');
+    expect(activeIds).toContain('patio');
+    expect(activeIds).toHaveLength(2);
+  });
+
+  it('in-progress bucket contains only portfolio-website', async () => {
+    mockGetProjects.mockResolvedValue([
+      makeProject({ id: 'os', status: 'active' }),
+      makeProject({ id: 'patio', status: 'active' }),
+      makeProject({ id: 'portfolio-website', status: 'in-progress' }),
+      makeProject({ id: 'pitcher-injury-risk', status: 'on-hold' }),
+      makeProject({ id: 'batting-average-ability', status: 'on-hold' }),
+      makeProject({ id: 'nba-shot-value', status: 'complete' }),
+    ]);
+    mockReadManual.mockReturnValue(makeManual());
+
+    const merged = await getMergedProjects();
+    const buckets = groupIntoBuckets(merged);
+
+    const inProgressIds = buckets['in-progress'].map((p) => p.id);
+    expect(inProgressIds).toContain('portfolio-website');
+    expect(inProgressIds).toHaveLength(1);
+  });
+
+  it('on-hold bucket contains pitcher-injury-risk and batting-average-ability', async () => {
+    mockGetProjects.mockResolvedValue([
+      makeProject({ id: 'os', status: 'active' }),
+      makeProject({ id: 'patio', status: 'active' }),
+      makeProject({ id: 'portfolio-website', status: 'in-progress' }),
+      makeProject({ id: 'pitcher-injury-risk', status: 'on-hold' }),
+      makeProject({ id: 'batting-average-ability', status: 'on-hold' }),
+      makeProject({ id: 'nba-shot-value', status: 'complete' }),
+    ]);
+    mockReadManual.mockReturnValue(makeManual());
+
+    const merged = await getMergedProjects();
+    const buckets = groupIntoBuckets(merged);
+
+    const onHoldIds = buckets['on-hold'].map((p) => p.id);
+    expect(onHoldIds).toContain('pitcher-injury-risk');
+    expect(onHoldIds).toContain('batting-average-ability');
+    expect(onHoldIds).toHaveLength(2);
+  });
+
+  it('nba-shot-value (complete) does NOT appear in any of the three main buckets', async () => {
+    mockGetProjects.mockResolvedValue([
+      makeProject({ id: 'os', status: 'active' }),
+      makeProject({ id: 'patio', status: 'active' }),
+      makeProject({ id: 'portfolio-website', status: 'in-progress' }),
+      makeProject({ id: 'pitcher-injury-risk', status: 'on-hold' }),
+      makeProject({ id: 'batting-average-ability', status: 'on-hold' }),
+      makeProject({ id: 'nba-shot-value', status: 'complete' }),
+    ]);
+    mockReadManual.mockReturnValue(makeManual());
+
+    const merged = await getMergedProjects();
+    const buckets = groupIntoBuckets(merged);
+
+    const allMainIds = [
+      ...buckets['active'].map((p) => p.id),
+      ...buckets['in-progress'].map((p) => p.id),
+      ...buckets['on-hold'].map((p) => p.id),
+    ];
+    expect(allMainIds).not.toContain('nba-shot-value');
+  });
+
+  it('main buckets together hold exactly 5 projects (6 minus the complete one)', async () => {
+    mockGetProjects.mockResolvedValue([
+      makeProject({ id: 'os', status: 'active' }),
+      makeProject({ id: 'patio', status: 'active' }),
+      makeProject({ id: 'portfolio-website', status: 'in-progress' }),
+      makeProject({ id: 'pitcher-injury-risk', status: 'on-hold' }),
+      makeProject({ id: 'batting-average-ability', status: 'on-hold' }),
+      makeProject({ id: 'nba-shot-value', status: 'complete' }),
+    ]);
+    mockReadManual.mockReturnValue(makeManual());
+
+    const merged = await getMergedProjects();
+    const buckets = groupIntoBuckets(merged);
+
+    const total =
+      buckets['active'].length +
+      buckets['in-progress'].length +
+      buckets['on-hold'].length;
+    expect(total).toBe(5);
+  });
+});
+
+// ── Unit: ProjectCard.astro source — required fields and overdue markup ───────
+
+describe('ProjectCard.astro source contains required field markup', () => {
+  let cardSource: string;
+
+  beforeEach(() => {
+    cardSource = readFileSync(resolve(ROOT, 'src/components/ProjectCard.astro'), 'utf-8');
+  });
+
+  it('renders status badge', () => {
+    expect(cardSource).toMatch(/project\.status/);
+  });
+
+  it('renders days_since_active', () => {
+    expect(cardSource).toMatch(/days_since_active/);
+    expect(cardSource).toMatch(/days ago/);
+  });
+
+  it('renders next_step', () => {
+    expect(cardSource).toMatch(/next_step/);
+  });
+
+  it('renders repo as plain text (not an anchor)', () => {
+    expect(cardSource).toMatch(/project\.repo/);
+    // repo should not be wrapped in an <a> tag — it should be in a <p>
+    expect(cardSource).toMatch(/<p[^>]*>\{project\.repo\}/);
+    // Make sure it's not rendered as an anchor
+    expect(cardSource).not.toMatch(/<a[^>]*>\{project\.repo\}/);
+  });
+
+  it('renders github as a link with target="_blank" and aria-label', () => {
+    expect(cardSource).toMatch(/target="_blank"/);
+    expect(cardSource).toMatch(/aria-label=/);
+    expect(cardSource).toMatch(/project\.github/);
+  });
+
+  it('overdue projects get a red visual treatment (border-red / bg-red classes)', () => {
+    // The component must apply red classes when project.overdue is true
+    expect(cardSource).toMatch(/project\.overdue/);
+    expect(cardSource).toMatch(/border-red/);
+    expect(cardSource).toMatch(/bg-red/);
+  });
+
+  it('github link opens in new tab (rel="noopener noreferrer")', () => {
+    expect(cardSource).toMatch(/rel="noopener noreferrer"/);
+  });
+});
+
+// ── Unit: index.astro source — section structure ─────────────────────────────
+
+describe('index.astro source — board section structure', () => {
+  let indexSource: string;
+
+  beforeEach(() => {
+    indexSource = readFileSync(resolve(ROOT, 'src/pages/index.astro'), 'utf-8');
+  });
+
+  it('defines BOARD_STATUSES with active, in-progress, on-hold', () => {
+    expect(indexSource).toMatch(/active/);
+    expect(indexSource).toMatch(/in-progress/);
+    expect(indexSource).toMatch(/on-hold/);
+  });
+
+  it('calls getMergedProjects()', () => {
+    expect(indexSource).toMatch(/getMergedProjects/);
+  });
+
+  it('renders a section for each status bucket', () => {
+    expect(indexSource).toMatch(/section-\$\{status\}|section-active|aria-labelledby.*section/);
+  });
+
+  it('shows project count in each section heading', () => {
+    expect(indexSource).toMatch(/projects\.length/);
+  });
+
+  it('imports and uses ProjectCard component', () => {
+    expect(indexSource).toMatch(/ProjectCard/);
+    expect(indexSource).toMatch(/import ProjectCard/);
+  });
+});
+
+// ── Behavioral: hit the running dev server ────────────────────────────────────
+
+const DEV_PORT = 4322;
+const BASE_URL = `http://localhost:${DEV_PORT}`;
+
+async function fetchPage(): Promise<string | null> {
+  try {
+    const res = await fetch(BASE_URL);
+    if (!res.ok) return null;
+    return res.text();
+  } catch {
+    return null;
+  }
+}
+
+describe('Behavioral: rendered HTML from dev server', () => {
+  let html: string;
+
+  beforeEach(async () => {
+    const result = await fetchPage();
+    if (!result) {
+      throw new Error(`Dev server not reachable at ${BASE_URL} — start with \`npm run dev\``);
+    }
+    html = result;
+  });
+
+  it('dev server responds with 200 and HTML', () => {
+    expect(html).toBeTruthy();
+    expect(html).toMatch(/<!DOCTYPE html>/i);
+  });
+
+  it('page title is "Project Dashboard"', () => {
+    expect(html).toContain('<title>Project Dashboard</title>');
+  });
+
+  it('active section contains os and Patio (2 projects)', () => {
+    const activeMatch = html.match(
+      /<section[^>]*aria-labelledby="section-active"[^>]*>([\s\S]*?)<\/section>/
+    );
+    expect(activeMatch, 'active section not found').toBeTruthy();
+    const activeContent = activeMatch![1];
+    expect(activeContent).toMatch(/\bos\b/);
+    expect(activeContent).toContain('Patio');
+    const names = [...activeContent.matchAll(/<h3[^>]*>([^<]+)<\/h3>/g)].map((m) => m[1].trim());
+    expect(names).toHaveLength(2);
+  });
+
+  it('in-progress section contains Portfolio Website (1 project)', () => {
+    const match = html.match(
+      /<section[^>]*aria-labelledby="section-in-progress"[^>]*>([\s\S]*?)<\/section>/
+    );
+    expect(match, 'in-progress section not found').toBeTruthy();
+    const content = match![1];
+    expect(content).toContain('Portfolio Website');
+    const names = [...content.matchAll(/<h3[^>]*>([^<]+)<\/h3>/g)].map((m) => m[1].trim());
+    expect(names).toHaveLength(1);
+  });
+
+  it('on-hold section contains pitcher-injury-risk and batting-average-ability (2 projects)', () => {
+    const match = html.match(
+      /<section[^>]*aria-labelledby="section-on-hold"[^>]*>([\s\S]*?)<\/section>/
+    );
+    expect(match, 'on-hold section not found').toBeTruthy();
+    const content = match![1];
+    expect(content).toContain('Pitcher Injury Risk');
+    expect(content).toContain('Batting Average Ability');
+    const names = [...content.matchAll(/<h3[^>]*>([^<]+)<\/h3>/g)].map((m) => m[1].trim());
+    expect(names).toHaveLength(2);
+  });
+
+  it('nba-shot-value does not appear in any of the three main buckets', () => {
+    const sections = [...html.matchAll(
+      /<section[^>]*aria-labelledby="section-(active|in-progress|on-hold)"[^>]*>([\s\S]*?)<\/section>/g
+    )];
+    for (const [, status, content] of sections) {
+      expect(content.toLowerCase()).not.toContain('nba');
+      expect(content.toLowerCase()).not.toContain('shot value');
+    }
+  });
+
+  it('each card shows a status badge', () => {
+    // Five status badges expected (one per main-bucket project)
+    const badgeMatches = html.match(/bg-green-100|bg-blue-100|bg-amber-100/g) ?? [];
+    expect(badgeMatches.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('each card shows days-since-active', () => {
+    const daysMatches = html.match(/\d+ days ago/g) ?? [];
+    expect(daysMatches.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('each card shows next_step text', () => {
+    // 5 cards, but batting-average-ability and pitcher-injury-risk share the same next_step
+    const nextStepMatches = html.match(/Next step/g) ?? [];
+    expect(nextStepMatches.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('each card shows repo path as plain text', () => {
+    // Match <p class="font-mono..."> with optional extra attributes (e.g. data-astro-source-*)
+    const repoMatches = html.match(/<p class="font-mono[^>]*>([^<]+)<\/p>/g) ?? [];
+    expect(repoMatches.length).toBeGreaterThanOrEqual(4); // nba-shot-value has no repo
+  });
+
+  it('each github-linked project has a link with target="_blank" and aria-label', () => {
+    const linkMatches = html.match(/<a[^>]+target="_blank"[^>]+aria-label="[^"]+on GitHub[^"]*"/g) ?? [];
+    expect(linkMatches.length).toBeGreaterThanOrEqual(5); // all 5 main-bucket projects have GitHub
+    for (const link of linkMatches) {
+      expect(link).toContain('rel="noopener noreferrer"');
+    }
+  });
+
+  it('overdue markup uses red classes in the component (source check)', () => {
+    // No current project has a due date, so we verify via source rather than live HTML
+    const cardSource = readFileSync(
+      resolve(ROOT, 'src/components/ProjectCard.astro'),
+      'utf-8'
+    );
+    expect(cardSource).toMatch(/border-red-\d+/);
+    expect(cardSource).toMatch(/bg-red-\d+/);
+    // The conditional must reference overdue
+    expect(cardSource).toMatch(/project\.overdue/);
+  });
+
+  it('page renders without obvious JS console errors (no <script> error markers in HTML)', () => {
+    // The rendered HTML should not include uncaught error dumps or Astro error overlays
+    expect(html).not.toContain('Uncaught Error');
+    expect(html).not.toContain('astro-error-overlay');
+    expect(html).not.toContain('500 Internal Server Error');
+  });
+});
