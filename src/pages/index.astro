@@ -13,6 +13,7 @@ try {
 }
 
 const BOARD_STATUSES = ['active', 'in-progress', 'on-hold'] as const;
+const COLLAPSED_STATUSES = new Set(['complete', 'archived']);
 
 const buckets: Record<typeof BOARD_STATUSES[number], MergedProject[]> = {
   active: [],
@@ -20,7 +21,13 @@ const buckets: Record<typeof BOARD_STATUSES[number], MergedProject[]> = {
   'on-hold': [],
 };
 
+const completedProjects: MergedProject[] = [];
+
 for (const project of allProjects) {
+  if (COLLAPSED_STATUSES.has(project.status)) {
+    completedProjects.push(project);
+    continue;
+  }
   const s = project.status as typeof BOARD_STATUSES[number];
   if (s in buckets) {
     buckets[s].push(project);
@@ -84,6 +91,19 @@ const sectionLabels: Record<typeof BOARD_STATUSES[number], string> = {
           );
         })}
       </main>
+
+      {completedProjects.length > 0 && (
+        <details class="mt-10">
+          <summary class="cursor-pointer text-sm font-medium text-gray-500 hover:text-gray-700 select-none">
+            Completed ({completedProjects.length})
+          </summary>
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 mt-4">
+            {completedProjects.map((project) => (
+              <ProjectCard project={project} />
+            ))}
+          </div>
+        </details>
+      )}
     </div>
   </body>
 </html>
