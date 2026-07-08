@@ -240,6 +240,80 @@ describe('POST /api/due-date', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Mutex import verification (fix-report: mutex imported by all three route handlers)
+// ---------------------------------------------------------------------------
+
+describe('mutex.ts exports manualMutex', () => {
+  it('manualMutex is a Mutex instance with runExclusive', async () => {
+    const { manualMutex } = await import('../src/lib/mutex.js');
+    expect(typeof manualMutex.runExclusive).toBe('function');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// I/O error → 500 { ok: false, error } (fix-report: I/O errors handled at boundary)
+// ---------------------------------------------------------------------------
+
+describe('I/O errors return 500 { ok: false, error }', () => {
+  it('POST /api/inbox returns 500 when readManual throws', async () => {
+    mockReadManual.mockImplementation(() => { throw new Error('disk read failure'); });
+    const ctx = makeContext({ text: 'hello' });
+    const res = await inboxPOST(ctx);
+
+    expect(res.status).toBe(500);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+    expect(typeof json.error).toBe('string');
+    expect(json.error).toContain('disk read failure');
+  });
+
+  it('DELETE /api/inbox returns 500 when readManual throws', async () => {
+    mockReadManual.mockImplementation(() => { throw new Error('disk read failure'); });
+    const ctx = makeContext({ id: 'some-id' });
+    const res = await inboxDELETE(ctx);
+
+    expect(res.status).toBe(500);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+    expect(typeof json.error).toBe('string');
+  });
+
+  it('POST /api/due-date returns 500 when readManual throws', async () => {
+    mockReadManual.mockImplementation(() => { throw new Error('disk read failure'); });
+    const ctx = makeContext({ projectId: 'alpha', date: '2026-09-01' });
+    const res = await dueDatePOST(ctx);
+
+    expect(res.status).toBe(500);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+    expect(typeof json.error).toBe('string');
+  });
+
+  it('POST /api/override returns 500 when readManual throws', async () => {
+    mockReadManual.mockImplementation(() => { throw new Error('disk read failure'); });
+    const ctx = makeContext({ projectId: 'beta', field: 'status', value: 'active' });
+    const res = await overridePOST(ctx);
+
+    expect(res.status).toBe(500);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+    expect(typeof json.error).toBe('string');
+  });
+
+  it('POST /api/inbox returns 500 when writeManual throws', async () => {
+    mockReadManual.mockReturnValue(makeManual());
+    mockWriteManual.mockImplementation(() => { throw new Error('disk write failure'); });
+    const ctx = makeContext({ text: 'hello' });
+    const res = await inboxPOST(ctx);
+
+    expect(res.status).toBe(500);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+    expect(json.error).toContain('disk write failure');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // POST /api/override
 // ---------------------------------------------------------------------------
 
