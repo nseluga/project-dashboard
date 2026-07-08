@@ -1,5 +1,19 @@
 {
-  "overrides": {},
-  "due_dates": {},
-  "inbox": []
+  "overrides": {
+    "test-proj": {
+      "priority": "high"
+    }
+  },
+  "due_dates": {
+    "test-proj": "2026-09-01"
+  },
+  "inbox": [
+    {
+      "id": "b1",
+      "text": "behavioral test",
+      "created": "2026-07-08",
+      "project": "test-proj",
+      "done": false
+    }
+  ]
 }

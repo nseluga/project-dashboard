@@ -335,4 +335,130 @@ describe('Item 2.3: Source — EditControls.astro payload shapes and ProjectCard
     // Should appear multiple times: in STATUS_OPTIONS, PRIORITY_OPTIONS, and comparisons
     expect(resetCount).toBeGreaterThan(2);
   });
+
+  // Fix: AbortController with 10s timeout in postJson (review Important finding)
+  it('EditControls.astro postJson uses AbortController with 10 s timeout', () => {
+    expect(editControlsSrc).toContain('AbortController');
+    // 10 000 ms timeout
+    expect(editControlsSrc).toContain('10000');
+    expect(editControlsSrc).toContain('controller.abort');
+    expect(editControlsSrc).toContain('signal: controller.signal');
+  });
+
+  it('EditControls.astro postJson catches AbortError and surfaces "Request timed out"', () => {
+    expect(editControlsSrc).toContain('AbortError');
+    expect(editControlsSrc).toContain('Request timed out');
+  });
+
+  it('EditControls.astro postJson clears timeout in finally block', () => {
+    expect(editControlsSrc).toContain('clearTimeout');
+    expect(editControlsSrc).toContain('finally');
+  });
+});
+
+// ============================================================================
+// SECTION C — Fix verification: review findings (Critical + Important)
+// ============================================================================
+
+describe('Fix 2.3-Critical: POST /api/override rejects unknown field with 400', () => {
+  it('returns 400 when field is not in ALLOWED_OVERRIDE_FIELDS (e.g. "id")', async () => {
+    mockReadManual.mockReturnValue(makeManual());
+
+    const ctx = makeContext({ projectId: 'os', field: 'id', value: 'injected' });
+    const res = await overridePOST(ctx);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+    expect(typeof json.error).toBe('string');
+    // writeManual must NOT have been called
+    expect(mockWriteManual).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when field is "last_active" (not in allowlist)', async () => {
+    mockReadManual.mockReturnValue(makeManual());
+
+    const ctx = makeContext({ projectId: 'os', field: 'last_active', value: '2099-01-01' });
+    const res = await overridePOST(ctx);
+
+    expect(res.status).toBe(400);
+    expect(mockWriteManual).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when field is "tags" (not in allowlist)', async () => {
+    mockReadManual.mockReturnValue(makeManual());
+
+    const ctx = makeContext({ projectId: 'os', field: 'tags', value: 'injected' });
+    const res = await overridePOST(ctx);
+
+    expect(res.status).toBe(400);
+    expect(mockWriteManual).not.toHaveBeenCalled();
+  });
+
+  it('returns 200 for each field in ALLOWED_OVERRIDE_FIELDS', async () => {
+    const allowedFields = ['name', 'summary', 'status', 'priority', 'next_step', 'repo', 'github'];
+    for (const field of allowedFields) {
+      vi.clearAllMocks();
+      mockWriteManual.mockReturnValue(undefined);
+      mockReadManual.mockReturnValue(makeManual());
+
+      const ctx = makeContext({ projectId: 'os', field, value: 'test-value' });
+      const res = await overridePOST(ctx);
+      expect(res.status, `field "${field}" should be allowed`).toBe(200);
+    }
+  });
+});
+
+describe('Fix 2.3-Important: POST /api/due-date rejects non-YYYY-MM-DD date with 400', () => {
+  it('returns 400 for date "20261231" (missing hyphens)', async () => {
+    mockReadManual.mockReturnValue(makeManual());
+
+    const ctx = makeContext({ projectId: 'os', date: '20261231' });
+    const res = await dueDatePOST(ctx);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+    expect(mockWriteManual).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 for date "2026/12/31" (wrong separator)', async () => {
+    mockReadManual.mockReturnValue(makeManual());
+
+    const ctx = makeContext({ projectId: 'os', date: '2026/12/31' });
+    const res = await dueDatePOST(ctx);
+
+    expect(res.status).toBe(400);
+    expect(mockWriteManual).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 for date "December 31, 2026" (human-readable format)', async () => {
+    mockReadManual.mockReturnValue(makeManual());
+
+    const ctx = makeContext({ projectId: 'os', date: 'December 31, 2026' });
+    const res = await dueDatePOST(ctx);
+
+    expect(res.status).toBe(400);
+    expect(mockWriteManual).not.toHaveBeenCalled();
+  });
+
+  it('returns 200 for a valid YYYY-MM-DD date', async () => {
+    mockReadManual.mockReturnValue(makeManual());
+
+    const ctx = makeContext({ projectId: 'os', date: '2026-12-31' });
+    const res = await dueDatePOST(ctx);
+
+    expect(res.status).toBe(200);
+    expect(mockWriteManual).toHaveBeenCalled();
+  });
+
+  it('returns 200 when date is null (clear operation)', async () => {
+    mockReadManual.mockReturnValue(makeManual({ due_dates: { os: '2026-12-31' } }));
+
+    const ctx = makeContext({ projectId: 'os', date: null });
+    const res = await dueDatePOST(ctx);
+
+    expect(res.status).toBe(200);
+    expect(mockWriteManual).toHaveBeenCalled();
+  });
 });
