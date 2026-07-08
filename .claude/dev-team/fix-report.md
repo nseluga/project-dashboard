@@ -1,4 +1,23 @@
 ---
+# Fix Report — Item 2.1 (board page review findings)
+**Date:** 2026-07-08
+**Findings addressed:** 4 of 4 total: 0 QA failures + 4 review findings (2 Important, 2 Minor)
+
+## Changes Made
+- `src/components/ProjectCard.astro:30-33,79-91` — computed `safeGithub` null-ified for non-http/https values; template renders `<a>` only when `safeGithub` is truthy, plain `<p>` otherwise — review Important 1 (security: `javascript:` URI injection)
+- `src/pages/index.astro:6-13,51-55` — wrapped `getMergedProjects()` in try/catch; on error logs to `console.error`, falls back to `allProjects = []`, renders red error banner in template — review Important 2 (reliability: no error boundary)
+- `src/lib/merge.ts:11-18` — added `OVERRIDE_WHITELIST` Set; filters `manual.overrides[project.id]` entries through the whitelist before spreading, preventing unknown keys from clobbering canonical project fields — review Minor 3 (security: unchecked override key spread)
+- `src/lib/projects.ts:78-79` — replaced `Math.max(0, Math.floor(...))` with `Number.isFinite(rawDays) ? Math.max(0, rawDays) : 0` guard, eliminating "NaN days ago" when `last_active` is "Invalid Date" — review Minor 4 (reliability: NaN days ago)
+
+## Disputed
+none
+
+## Deferred
+none
+
+---
+
+---
 # Fix Report — Item 1.4 (API route handler review findings)
 **Date:** 2026-07-08
 **Findings addressed:** 2 of 3 total: 0 QA failures + 2 review findings (both Important)
