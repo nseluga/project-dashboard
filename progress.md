@@ -34,6 +34,7 @@
 | 6 | 6.2 — Momentum view | todo |
 | 6 | 6.3 — "What to work on next" recommendation | todo |
 | 6 | 6.4 — Claude token tracking | todo |
+| 7 | 7.1 — Typography, color, and visual polish | todo |
 
 ## How to update this file
 
