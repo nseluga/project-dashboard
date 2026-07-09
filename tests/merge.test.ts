@@ -42,6 +42,7 @@ function makeManual(overrides: Partial<ManualData> = {}): ManualData {
     due_dates: {},
     inbox: [],
     hidden_fields: {},
+    token_log: [],
     ...overrides,
   };
 }
@@ -224,6 +225,51 @@ describe('getMergedProjects()', () => {
 
       const y = results.find((p) => p.id === 'proj-y')!;
       expect(y.hidden_fields).toEqual({ due_date: false, priority: false });
+    });
+  });
+
+  describe('total_tokens', () => {
+    it('defaults to 0 when no token_log entries exist for the project', async () => {
+      mockGetProjects.mockResolvedValue([makeProject({ id: 'alpha' })]);
+      mockReadManual.mockReturnValue(makeManual());
+
+      const results = await getMergedProjects();
+
+      expect(results[0].total_tokens).toBe(0);
+    });
+
+    it('sums all token_log entries for the project', async () => {
+      mockGetProjects.mockResolvedValue([makeProject({ id: 'alpha' })]);
+      mockReadManual.mockReturnValue(makeManual({
+        token_log: [
+          { id: 'e1', projectId: 'alpha', tokens: 1000, note: null, created: '2026-07-09T00:00:00.000Z' },
+          { id: 'e2', projectId: 'alpha', tokens: 2500, note: 'code gen', created: '2026-07-09T01:00:00.000Z' },
+        ],
+      }));
+
+      const results = await getMergedProjects();
+
+      expect(results[0].total_tokens).toBe(3500);
+    });
+
+    it('only counts entries for the matching project', async () => {
+      mockGetProjects.mockResolvedValue([
+        makeProject({ id: 'alpha' }),
+        makeProject({ id: 'beta' }),
+      ]);
+      mockReadManual.mockReturnValue(makeManual({
+        token_log: [
+          { id: 'e1', projectId: 'alpha', tokens: 1000, note: null, created: '2026-07-09T00:00:00.000Z' },
+          { id: 'e2', projectId: 'beta', tokens: 500, note: null, created: '2026-07-09T00:00:00.000Z' },
+        ],
+      }));
+
+      const results = await getMergedProjects();
+
+      const a = results.find((p) => p.id === 'alpha')!;
+      const b = results.find((p) => p.id === 'beta')!;
+      expect(a.total_tokens).toBe(1000);
+      expect(b.total_tokens).toBe(500);
     });
   });
 });

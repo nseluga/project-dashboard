@@ -102,6 +102,11 @@ const safeGithub =
     </p>
   )}
 
+  <!-- Token usage (if any logged) -->
+  {project.total_tokens > 0 && (
+    <p class="text-xs font-medium text-gray-500">Tokens: {project.total_tokens.toLocaleString()}</p>
+  )}
+
   <!-- Inline edit controls (collapsed by default) -->
   <details class="mt-1">
     <summary class="cursor-pointer text-xs font-medium text-gray-400 hover:text-gray-600 select-none list-none">Edit</summary>

@@ -23,6 +23,9 @@ export async function getMergedProjects(): Promise<MergedProject[]> {
       due_date: rawHidden.due_date ?? false,
       priority: rawHidden.priority ?? false,
     };
+    const total_tokens = manual.token_log
+      .filter((entry) => entry.projectId === project.id)
+      .reduce((sum, entry) => sum + entry.tokens, 0);
 
     return {
       ...project,
@@ -30,6 +33,7 @@ export async function getMergedProjects(): Promise<MergedProject[]> {
       due_date,
       overdue,
       hidden_fields,
+      total_tokens,
     };
   });
 }

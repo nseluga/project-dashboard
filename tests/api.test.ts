@@ -10,6 +10,7 @@ vi.mock('../src/lib/manual.js', () => ({
 const { POST: dueDatePOST } = await import('../src/pages/api/due-date.js');
 const { POST: overridePOST } = await import('../src/pages/api/override.js');
 const { POST: fieldVisibilityPOST } = await import('../src/pages/api/field-visibility.js');
+const { POST: tokenLogPOST, DELETE: tokenLogDELETE } = await import('../src/pages/api/token-log.js');
 const { readManual, writeManual } = await import('../src/lib/manual.js');
 
 const mockReadManual = vi.mocked(readManual);
@@ -32,6 +33,7 @@ function makeManual(overrides: Partial<ManualData> = {}): ManualData {
     due_dates: {},
     inbox: [],
     hidden_fields: {},
+    token_log: [],
     ...overrides,
   };
 }
@@ -368,5 +370,167 @@ describe('POST /api/field-visibility', () => {
     const written: ManualData = mockWriteManual.mock.calls[0][0];
     expect(written.hidden_fields['gamma']['priority']).toBe(true);
     expect(written.hidden_fields['delta']['due_date']).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/token-log
+// ---------------------------------------------------------------------------
+
+describe('POST /api/token-log', () => {
+  it('returns 200 { ok: true } and appends entry', async () => {
+    mockReadManual.mockReturnValue(makeManual());
+
+    const ctx = makeContext({ projectId: 'alpha', tokens: 5000, note: 'planning session' });
+    const res = await tokenLogPOST(ctx);
+
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json).toEqual({ ok: true });
+
+    expect(mockWriteManual).toHaveBeenCalledOnce();
+    const written: ManualData = mockWriteManual.mock.calls[0][0];
+    expect(written.token_log).toHaveLength(1);
+    expect(written.token_log[0].projectId).toBe('alpha');
+    expect(written.token_log[0].tokens).toBe(5000);
+    expect(written.token_log[0].note).toBe('planning session');
+    expect(typeof written.token_log[0].id).toBe('string');
+    expect(typeof written.token_log[0].created).toBe('string');
+  });
+
+  it('sets note to null when not provided', async () => {
+    mockReadManual.mockReturnValue(makeManual());
+
+    const ctx = makeContext({ projectId: 'alpha', tokens: 1000 });
+    await tokenLogPOST(ctx);
+
+    const written: ManualData = mockWriteManual.mock.calls[0][0];
+    expect(written.token_log[0].note).toBeNull();
+  });
+
+  it('returns 400 when projectId is missing', async () => {
+    mockReadManual.mockReturnValue(makeManual());
+    const ctx = makeContext({ tokens: 1000 });
+    const res = await tokenLogPOST(ctx);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+  });
+
+  it('returns 400 when tokens is zero', async () => {
+    mockReadManual.mockReturnValue(makeManual());
+    const ctx = makeContext({ projectId: 'alpha', tokens: 0 });
+    const res = await tokenLogPOST(ctx);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+  });
+
+  it('returns 400 when tokens is negative', async () => {
+    mockReadManual.mockReturnValue(makeManual());
+    const ctx = makeContext({ projectId: 'alpha', tokens: -100 });
+    const res = await tokenLogPOST(ctx);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+  });
+
+  it('returns 400 when tokens is not an integer', async () => {
+    mockReadManual.mockReturnValue(makeManual());
+    const ctx = makeContext({ projectId: 'alpha', tokens: 1.5 });
+    const res = await tokenLogPOST(ctx);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+  });
+
+  it('returns 500 when readManual throws', async () => {
+    mockReadManual.mockImplementation(() => { throw new Error('disk read failure'); });
+    const ctx = makeContext({ projectId: 'alpha', tokens: 1000 });
+    const res = await tokenLogPOST(ctx);
+
+    expect(res.status).toBe(500);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+  });
+
+  it('returns Content-Type: application/json', async () => {
+    mockReadManual.mockReturnValue(makeManual());
+    const ctx = makeContext({ projectId: 'alpha', tokens: 1000 });
+    const res = await tokenLogPOST(ctx);
+
+    expect(res.headers.get('content-type')).toBe('application/json');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/token-log
+// ---------------------------------------------------------------------------
+
+describe('DELETE /api/token-log', () => {
+  it('returns 200 { ok: true } and removes the entry when id is found', async () => {
+    mockReadManual.mockReturnValue(makeManual({
+      token_log: [
+        { id: 'entry-1', projectId: 'alpha', tokens: 1000, note: null, created: '2026-07-09T00:00:00.000Z' },
+        { id: 'entry-2', projectId: 'beta', tokens: 2000, note: 'test', created: '2026-07-09T00:00:00.000Z' },
+      ],
+    }));
+
+    const ctx = makeContext({ id: 'entry-1' });
+    const res = await tokenLogDELETE(ctx);
+
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json).toEqual({ ok: true });
+
+    const written: ManualData = mockWriteManual.mock.calls[0][0];
+    expect(written.token_log).toHaveLength(1);
+    expect(written.token_log[0].id).toBe('entry-2');
+  });
+
+  it('returns 404 when id is not found', async () => {
+    mockReadManual.mockReturnValue(makeManual({ token_log: [] }));
+
+    const ctx = makeContext({ id: 'does-not-exist' });
+    const res = await tokenLogDELETE(ctx);
+
+    expect(res.status).toBe(404);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+    expect(mockWriteManual).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when id is missing', async () => {
+    mockReadManual.mockReturnValue(makeManual());
+    const ctx = makeContext({});
+    const res = await tokenLogDELETE(ctx);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+  });
+
+  it('returns 500 when readManual throws', async () => {
+    mockReadManual.mockImplementation(() => { throw new Error('disk read failure'); });
+    const ctx = makeContext({ id: 'entry-1' });
+    const res = await tokenLogDELETE(ctx);
+
+    expect(res.status).toBe(500);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+  });
+
+  it('returns Content-Type: application/json', async () => {
+    mockReadManual.mockReturnValue(makeManual({
+      token_log: [{ id: 'x', projectId: 'alpha', tokens: 1, note: null, created: '2026-07-09T00:00:00.000Z' }],
+    }));
+    const ctx = makeContext({ id: 'x' });
+    const res = await tokenLogDELETE(ctx);
+
+    expect(res.headers.get('content-type')).toBe('application/json');
   });
 });

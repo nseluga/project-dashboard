@@ -23,4 +23,6 @@ export interface MergedProject extends Project {
   overdue: boolean;
   /** Per-field visibility toggles; false means visible (default) */
   hidden_fields: { due_date: boolean; priority: boolean };
+  /** Sum of all token_log entries for this project; 0 if none */
+  total_tokens: number;
 }

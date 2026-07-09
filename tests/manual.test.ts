@@ -31,7 +31,7 @@ const { readManual, writeManual } = await import('../src/lib/manual.js');
 describe('readManual()', () => {
   it('returns empty shape when data/manual.json is absent', () => {
     const result = readManual();
-    expect(result).toEqual({ overrides: {}, due_dates: {}, inbox: [], hidden_fields: {} });
+    expect(result).toEqual({ overrides: {}, due_dates: {}, inbox: [], hidden_fields: {}, token_log: [] });
   });
 
   it('returns parsed data when data/manual.json exists', () => {
@@ -43,8 +43,8 @@ describe('readManual()', () => {
     fs.writeFileSync(path.join(dataDir, 'manual.json'), JSON.stringify(data), 'utf-8');
 
     const result = readManual();
-    // readManual() normalizes missing keys via EMPTY_MANUAL spread, so hidden_fields is always present
-    expect(result).toEqual({ ...data, hidden_fields: {} });
+    // readManual() normalizes missing keys, so hidden_fields and token_log are always present
+    expect(result).toEqual({ ...data, hidden_fields: {}, token_log: [] });
   });
 
   it('throws a descriptive error on malformed JSON', () => {
@@ -62,6 +62,7 @@ describe('writeManual()', () => {
         { id: 'x1', text: 'Review model', created: '2026-07-08', project: 'pitcher-injury-risk', done: false },
       ],
       hidden_fields: {},
+      token_log: [],
     };
 
     writeManual(data);
@@ -70,13 +71,13 @@ describe('writeManual()', () => {
   });
 
   it('produces data/manual.json at the expected path', () => {
-    writeManual({ overrides: {}, due_dates: {}, inbox: [], hidden_fields: {} });
+    writeManual({ overrides: {}, due_dates: {}, inbox: [], hidden_fields: {}, token_log: [] });
     const exists = fs.existsSync(path.join(dataDir, 'manual.json'));
     expect(exists).toBe(true);
   });
 
   it('uses atomic rename: .tmp file is gone after write completes', () => {
-    writeManual({ overrides: {}, due_dates: {}, inbox: [], hidden_fields: {} });
+    writeManual({ overrides: {}, due_dates: {}, inbox: [], hidden_fields: {}, token_log: [] });
     const tmpExists = fs.existsSync(path.join(dataDir, 'manual.json.tmp'));
     expect(tmpExists).toBe(false);
   });
@@ -85,7 +86,7 @@ describe('writeManual()', () => {
     // Pre-existing final file has stale content — a non-atomic write that crashes
     // after opening the file could leave it empty. An atomic rename guarantees
     // the file is either the old content or the new content, never partial.
-    const staleData = { overrides: {}, due_dates: { stale: '2025-01-01' }, inbox: [], hidden_fields: {} };
+    const staleData = { overrides: {}, due_dates: { stale: '2025-01-01' }, inbox: [], hidden_fields: {}, token_log: [] };
     fs.writeFileSync(path.join(dataDir, 'manual.json'), JSON.stringify(staleData), 'utf-8');
 
     const newData = {
@@ -93,6 +94,7 @@ describe('writeManual()', () => {
       due_dates: {},
       inbox: [{ id: 'z1', text: 'Check logs', created: '2026-07-08', project: 'os', done: false }],
       hidden_fields: {},
+      token_log: [],
     };
 
     writeManual(newData);

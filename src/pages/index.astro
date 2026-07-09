@@ -5,6 +5,7 @@ import { getRecommendation } from '../lib/recommend.js';
 import ProjectCard from '../components/ProjectCard.astro';
 import WeeklyDigest from '../components/WeeklyDigest.astro';
 import NextUp from '../components/NextUp.astro';
+import TokenTracker from '../components/TokenTracker.astro';
 import type { MergedProject } from '../types/project.js';
 
 let allProjects: MergedProject[] = [];
@@ -122,6 +123,8 @@ const recommendation = getRecommendation(allProjects, todayStr);
           </div>
         </details>
       )}
+
+      <TokenTracker projects={allProjects} />
 
     </div>
   </body>

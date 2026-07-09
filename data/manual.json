@@ -23,5 +23,7 @@
       "project": "test-proj",
       "done": false
     }
-  ]
+  ],
+  "hidden_fields": {},
+  "token_log": []
 }

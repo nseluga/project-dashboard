@@ -1,0 +1,218 @@
+---
+import { readManual } from '../lib/manual.js';
+import type { MergedProject } from '../types/project.js';
+import type { TokenLogEntry } from '../types/manual.js';
+
+interface Props {
+  projects: MergedProject[];
+}
+
+const { projects } = Astro.props;
+
+let tokenLog: TokenLogEntry[] = [];
+try {
+  const manual = readManual();
+  tokenLog = manual.token_log;
+} catch {
+  // Degrade gracefully — table renders empty
+}
+
+// Newest first
+const entries = [...tokenLog].reverse();
+
+function formatDate(iso: string): string {
+  const entryDate = new Date(iso).toISOString().slice(0, 10);
+  const today = new Date().toISOString().slice(0, 10);
+  const todayMs = new Date(today).getTime();
+  const entryMs = new Date(entryDate).getTime();
+  const diffDays = Math.round((todayMs - entryMs) / 86_400_000);
+  if (diffDays === 0) return 'today';
+  if (diffDays === 1) return '1 day ago';
+  return `${diffDays} days ago`;
+}
+
+const projectNameById = Object.fromEntries(projects.map((p) => [p.id, p.name]));
+---
+
+<section class="mt-10" aria-labelledby="token-tracker-heading">
+  <h2 id="token-tracker-heading" class="text-lg font-semibold text-gray-800 mb-4">Token Tracker</h2>
+
+  <!-- Log form -->
+  <form id="token-log-form" class="flex flex-wrap gap-3 items-end mb-6">
+    <div class="flex flex-col gap-1">
+      <label for="token-project-select" class="text-xs font-semibold uppercase tracking-wide text-gray-400">Project</label>
+      <select
+        id="token-project-select"
+        name="projectId"
+        class="rounded border border-gray-300 px-2 py-1.5 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+        required
+      >
+        <option value="">— select project —</option>
+        {projects.map((p) => (
+          <option value={p.id}>{p.name}</option>
+        ))}
+      </select>
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <label for="token-count-input" class="text-xs font-semibold uppercase tracking-wide text-gray-400">Tokens</label>
+      <input
+        id="token-count-input"
+        name="tokens"
+        type="number"
+        min="1"
+        placeholder="e.g. 5000"
+        class="rounded border border-gray-300 px-2 py-1.5 text-sm text-gray-800 w-32 focus:outline-none focus:ring-2 focus:ring-blue-400"
+        required
+      />
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <label for="token-note-input" class="text-xs font-semibold uppercase tracking-wide text-gray-400">Note (optional)</label>
+      <input
+        id="token-note-input"
+        name="note"
+        type="text"
+        maxlength="200"
+        placeholder="e.g. planning session"
+        class="rounded border border-gray-300 px-2 py-1.5 text-sm text-gray-800 w-48 focus:outline-none focus:ring-2 focus:ring-blue-400"
+      />
+    </div>
+
+    <button
+      type="submit"
+      class="px-4 py-1.5 rounded bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+    >
+      Log
+    </button>
+
+    <p id="token-log-error" role="alert" class="text-xs text-red-600 hidden"></p>
+  </form>
+
+  <!-- Entry table -->
+  {entries.length === 0 ? (
+    <p class="text-sm text-gray-400 italic">No token logs yet.</p>
+  ) : (
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm border-collapse">
+        <thead>
+          <tr class="border-b border-gray-200">
+            <th class="text-left py-2 pr-4 text-xs font-semibold uppercase tracking-wide text-gray-400">Project</th>
+            <th class="text-right py-2 pr-4 text-xs font-semibold uppercase tracking-wide text-gray-400">Tokens</th>
+            <th class="text-left py-2 pr-4 text-xs font-semibold uppercase tracking-wide text-gray-400">Note</th>
+            <th class="text-left py-2 pr-4 text-xs font-semibold uppercase tracking-wide text-gray-400">When</th>
+            <th class="py-2 text-xs font-semibold uppercase tracking-wide text-gray-400"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map((entry) => (
+            <tr class="border-b border-gray-100 hover:bg-gray-50">
+              <td class="py-2 pr-4 text-gray-800 font-medium">{projectNameById[entry.projectId] ?? entry.projectId}</td>
+              <td class="py-2 pr-4 text-gray-700 text-right font-mono">{entry.tokens.toLocaleString()}</td>
+              <td class="py-2 pr-4 text-gray-500">{entry.note ?? '—'}</td>
+              <td class="py-2 pr-4 text-gray-400 whitespace-nowrap">{formatDate(entry.created)}</td>
+              <td class="py-2">
+                <button
+                  type="button"
+                  class="token-delete-btn text-gray-300 hover:text-red-500 focus:outline-none focus:ring-1 focus:ring-red-400 rounded px-1"
+                  data-entry-id={entry.id}
+                  aria-label={`Delete token log entry for ${projectNameById[entry.projectId] ?? entry.projectId}`}
+                >
+                  ×
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+</section>
+
+<script>
+  const TIMEOUT_MS = 8_000;
+
+  // --- Log form ---
+  const form = document.getElementById('token-log-form') as HTMLFormElement | null;
+  const errorEl = document.getElementById('token-log-error') as HTMLParagraphElement | null;
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!form || !errorEl) return;
+
+    if (errorEl) {
+      errorEl.textContent = '';
+      errorEl.classList.add('hidden');
+    }
+
+    const data = new FormData(form);
+    const projectId = (data.get('projectId') as string).trim();
+    const tokensRaw = data.get('tokens') as string;
+    const note = (data.get('note') as string).trim();
+
+    if (!projectId) return;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+    try {
+      const res = await fetch('/api/token-log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId, tokens: Number(tokensRaw), note: note || undefined }),
+        signal: controller.signal,
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        if (errorEl) {
+          errorEl.textContent = json.error ?? 'Failed to log tokens.';
+          errorEl.classList.remove('hidden');
+        }
+        return;
+      }
+
+      window.location.reload();
+    } catch (err) {
+      if (errorEl) {
+        errorEl.textContent = 'Request failed. Please try again.';
+        errorEl.classList.remove('hidden');
+      }
+    } finally {
+      clearTimeout(timer);
+    }
+  });
+
+  // --- Delete buttons ---
+  document.querySelectorAll<HTMLButtonElement>('.token-delete-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const entryId = btn.dataset.entryId;
+      if (!entryId) return;
+
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+      try {
+        btn.disabled = true;
+
+        const res = await fetch('/api/token-log', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: entryId }),
+          signal: controller.signal,
+        });
+
+        const json = await res.json();
+        if (res.ok && json.ok) {
+          window.location.reload();
+        } else {
+          btn.disabled = false;
+        }
+      } catch {
+        btn.disabled = false;
+      } finally {
+        clearTimeout(timer);
+      }
+    });
+  });
+</script>
