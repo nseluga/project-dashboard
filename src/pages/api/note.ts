@@ -47,13 +47,15 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   try {
+    const allProjects = await getMergedProjects();
+    const projectId = autoTag(
+      text.trim(),
+      allProjects.map((p) => p.id),
+      allProjects.map((p) => p.name),
+    );
+
     return await manualMutex.runExclusive(async () => {
       const manual = readManual();
-      const projects = await getMergedProjects(manual);
-
-      const projectIds = projects.map((p) => p.id);
-      const projectNames = projects.map((p) => p.name);
-      const projectId = autoTag(text.trim(), projectIds, projectNames);
 
       const entry: NoteEntry = {
         id: crypto.randomUUID(),
@@ -172,20 +174,20 @@ export const PATCH: APIRoute = async ({ request }) => {
   }
 
   try {
+    // Validate projectId against known projects before entering the mutex
+    if (projectId !== null) {
+      const allProjects = await getMergedProjects();
+      const knownIds = new Set(allProjects.map((p) => p.id));
+      if (!knownIds.has(projectId as string)) {
+        return new Response(
+          JSON.stringify({ ok: false, error: `unknown projectId: ${projectId}` }),
+          { status: 400, headers: JSON_HEADERS },
+        );
+      }
+    }
+
     return await manualMutex.runExclusive(async () => {
       const manual = readManual();
-
-      // Validate projectId against known projects
-      if (projectId !== null) {
-        const projects = await getMergedProjects(manual);
-        const knownIds = new Set(projects.map((p) => p.id));
-        if (!knownIds.has(projectId as string)) {
-          return new Response(
-            JSON.stringify({ ok: false, error: `unknown projectId: ${projectId}` }),
-            { status: 400, headers: JSON_HEADERS },
-          );
-        }
-      }
 
       const note = manual.notes.find((n) => n.id === id);
       if (!note) {

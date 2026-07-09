@@ -11,8 +11,8 @@ let loadError = false;
 
 try {
   const manual = readManual();
-  notes = manual.notes;
   projects = await getMergedProjects(manual);
+  notes = manual.notes;
 } catch (err) {
   console.error('[notes] failed to load:', err);
   loadError = true;
@@ -36,9 +36,10 @@ for (const note of notes) {
   }
 }
 
+const now_ms = Date.now();
+
 function daysAgoLabel(created: string): string {
   const created_ms = new Date(created).getTime();
-  const now_ms = Date.now();
   const diff = Math.floor((now_ms - created_ms) / (1000 * 60 * 60 * 24));
   if (diff === 0) return 'today';
   if (diff === 1) return '1 day ago';
@@ -232,6 +233,21 @@ function daysAgoLabel(created: string): string {
       });
 
       // ---------------------------------------------------------------------------
+      // Shared inline error helper
+      // ---------------------------------------------------------------------------
+      function showNoteError(anchor: HTMLElement, message: string): void {
+        const li = anchor.closest('li');
+        if (!li) return;
+        let errorEl = li.querySelector<HTMLElement>('.note-inline-error');
+        if (!errorEl) {
+          errorEl = document.createElement('span');
+          errorEl.className = 'note-inline-error text-xs text-red-600 mt-1';
+          li.appendChild(errorEl);
+        }
+        errorEl.textContent = message;
+      }
+
+      // ---------------------------------------------------------------------------
       // Delete note
       // ---------------------------------------------------------------------------
       document.querySelectorAll<HTMLButtonElement>('.note-delete').forEach((btn) => {
@@ -255,11 +271,14 @@ function daysAgoLabel(created: string): string {
             if (json.ok) {
               window.location.reload();
             } else {
-              console.error('[notes] delete failed:', json.error);
+              showNoteError(btn, json.error ?? 'Failed to delete note.');
               btn.disabled = false;
             }
           } catch (err) {
-            console.error('[notes] delete error:', err);
+            showNoteError(
+              btn,
+              (err as Error).name === 'AbortError' ? 'Request timed out.' : 'Failed to delete note.',
+            );
             btn.disabled = false;
           } finally {
             clearTimeout(timer);
@@ -293,11 +312,14 @@ function daysAgoLabel(created: string): string {
             if (json.ok) {
               window.location.reload();
             } else {
-              console.error('[notes] reassign failed:', json.error);
+              showNoteError(select, json.error ?? 'Failed to reassign note.');
               select.disabled = false;
             }
           } catch (err) {
-            console.error('[notes] reassign error:', err);
+            showNoteError(
+              select,
+              (err as Error).name === 'AbortError' ? 'Request timed out.' : 'Failed to reassign note.',
+            );
             select.disabled = false;
           } finally {
             clearTimeout(timer);
