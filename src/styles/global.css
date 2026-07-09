@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: 'Inter', sans-serif;
+  --font-display: 'Plus Jakarta Sans', sans-serif;
+}
+
 /* Hide disclosure triangle in all browsers (Safari needs ::-webkit-details-marker) */
 summary { list-style: none; }
 summary::-webkit-details-marker { display: none; }

@@ -12,21 +12,21 @@ const { moved, overdue, comingUp } = computeDigestBuckets(projects);
 ---
 
 <section class="mb-6 rounded-lg border border-blue-100 bg-slate-50 p-5 shadow-sm" aria-label="Weekly digest">
-  <h2 class="text-base font-semibold text-gray-800 mb-4">Weekly Digest</h2>
+  <h2 class="font-display text-base font-semibold text-slate-800 mb-4">Weekly Digest</h2>
 
   <div class="flex flex-col gap-5 sm:flex-row sm:gap-8">
 
     <!-- Moved -->
     <div class="flex-1 min-w-0">
-      <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Moved</h3>
+      <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Moved</h3>
       {moved.length === 0 ? (
-        <p class="text-sm text-gray-400 italic">Nothing here.</p>
+        <p class="text-sm text-slate-400 italic">Nothing here.</p>
       ) : (
         <ul class="flex flex-col gap-1">
           {moved.map((p) => (
-            <li class="text-sm text-gray-800">
+            <li class="text-sm text-slate-800">
               <span class="font-medium">{p.name}</span>
-              <span class="text-gray-500"> — active {p.days_since_active} day{p.days_since_active === 1 ? '' : 's'} ago</span>
+              <span class="text-slate-500"> — active {p.days_since_active} day{p.days_since_active === 1 ? '' : 's'} ago</span>
             </li>
           ))}
         </ul>
@@ -35,13 +35,13 @@ const { moved, overdue, comingUp } = computeDigestBuckets(projects);
 
     <!-- Overdue -->
     <div class="flex-1 min-w-0">
-      <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Overdue</h3>
+      <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Overdue</h3>
       {overdue.length === 0 ? (
-        <p class="text-sm text-gray-400 italic">Nothing here.</p>
+        <p class="text-sm text-slate-400 italic">Nothing here.</p>
       ) : (
         <ul class="flex flex-col gap-1">
           {overdue.map((p) => (
-            <li class="text-sm text-gray-800">
+            <li class="text-sm text-slate-800">
               <span class="font-medium">{p.name}</span>
               <span class="text-red-600"> — due {p.due_date}</span>
             </li>
@@ -52,15 +52,15 @@ const { moved, overdue, comingUp } = computeDigestBuckets(projects);
 
     <!-- Coming up -->
     <div class="flex-1 min-w-0">
-      <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Coming up</h3>
+      <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Coming up</h3>
       {comingUp.length === 0 ? (
-        <p class="text-sm text-gray-400 italic">Nothing here.</p>
+        <p class="text-sm text-slate-400 italic">Nothing here.</p>
       ) : (
         <ul class="flex flex-col gap-1">
           {comingUp.map((p) => (
-            <li class="text-sm text-gray-800">
+            <li class="text-sm text-slate-800">
               <span class="font-medium">{p.name}</span>
-              <span class="text-gray-500"> — due {p.due_date}</span>
+              <span class="text-slate-500"> — due {p.due_date}</span>
             </li>
           ))}
         </ul>

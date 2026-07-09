@@ -51,9 +51,9 @@ const reasonTags = project ? buildReasonTags(project, today) : [];
 {project && (
   <div class="rounded-lg border border-indigo-200 bg-indigo-50 p-5 shadow-sm mb-6">
     <p class="text-xs font-semibold uppercase tracking-wide text-indigo-400 mb-1">Up next</p>
-    <h2 class="text-lg font-bold text-gray-900 mb-1">{project.name}</h2>
+    <h2 class="font-display text-lg font-bold text-slate-900 mb-1">{project.name}</h2>
     {project.next_step && (
-      <p class="text-sm text-gray-700 mb-3">{project.next_step}</p>
+      <p class="text-sm text-slate-700 mb-3">{project.next_step}</p>
     )}
     {reasonTags.length > 0 && (
       <div class="flex flex-wrap gap-1.5">
