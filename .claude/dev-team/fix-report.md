@@ -1,4 +1,19 @@
 ---
+# Fix Report — Item 6.4 (TokenTracker date hoist + DELETE shape-guard tests)
+**Date:** 2026-07-09
+**Findings addressed:** 2 of 2 total: 0 QA failures + 2 review findings (both Minor)
+
+## Changes Made
+- `src/components/TokenTracker.astro:17` — hoisted `new Date()` to frontmatter as `const todayStr`; `formatDate` now accepts `todayStr` as second param; call site updated to `formatDate(entry.created, todayStr)` — review Minor
+- `tests/api.test.ts` — added two DELETE `/api/token-log` shape-guard tests: `null body → 400` and `array body → 400`, mirroring existing POST shape-guard tests at lines 469 and 484 — review Minor
+
+## Disputed
+none
+
+## Deferred
+none
+
+---
 # Fix Report — Item 6.2 (git.ts async Minor findings)
 **Date:** 2026-07-09
 **Findings addressed:** 2 of 2 total: 0 QA failures + 2 review findings (both Minor)
