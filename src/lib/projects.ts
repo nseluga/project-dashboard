@@ -5,8 +5,8 @@ import { join } from 'path';
 import matter from 'gray-matter';
 import type { Project } from '../types/project.js';
 
-// os-evals is a sub-project of os; project-dashboard is this app itself
-const SKIP_DIRS = new Set(['os-evals', 'project-dashboard']);
+// project-dashboard is this app itself
+const SKIP_DIRS = new Set(['project-dashboard']);
 const MS_PER_DAY = 86_400_000;
 const GIT_TIMEOUT_MS = 5_000;
 
