@@ -1,0 +1,309 @@
+---
+import '../styles/global.css';
+import { readManual } from '../lib/manual.js';
+import { getMergedProjects } from '../lib/merge.js';
+import type { MergedProject } from '../types/project.js';
+import type { NoteEntry } from '../types/manual.js';
+
+let projects: MergedProject[] = [];
+let notes: NoteEntry[] = [];
+let loadError = false;
+
+try {
+  const manual = readManual();
+  notes = manual.notes;
+  projects = await getMergedProjects(manual);
+} catch (err) {
+  console.error('[notes] failed to load:', err);
+  loadError = true;
+}
+
+// Build a map from projectId -> project name for display
+const projectMap = new Map<string, string>(projects.map((p) => [p.id, p.name]));
+
+// Group notes: null projectId → unsorted, otherwise by projectId
+const unsorted: NoteEntry[] = [];
+const byProject = new Map<string, NoteEntry[]>();
+
+for (const note of notes) {
+  if (note.projectId === null) {
+    unsorted.push(note);
+  } else {
+    if (!byProject.has(note.projectId)) {
+      byProject.set(note.projectId, []);
+    }
+    byProject.get(note.projectId)!.push(note);
+  }
+}
+
+function daysAgoLabel(created: string): string {
+  const created_ms = new Date(created).getTime();
+  const now_ms = Date.now();
+  const diff = Math.floor((now_ms - created_ms) / (1000 * 60 * 60 * 24));
+  if (diff === 0) return 'today';
+  if (diff === 1) return '1 day ago';
+  return `${diff} days ago`;
+}
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Notes — Project Dashboard</title>
+  </head>
+  <body class="bg-gray-50 min-h-screen text-gray-900">
+    <div class="max-w-3xl mx-auto px-4 py-8">
+      <header class="mb-8">
+        <div class="flex items-center justify-between">
+          <h1 class="text-2xl font-bold text-gray-900">Notes</h1>
+          <nav aria-label="Site navigation">
+            <a href="/" class="text-sm text-gray-500 hover:text-gray-700">Dashboard</a>
+          </nav>
+        </div>
+      </header>
+
+      {loadError && (
+        <div class="bg-red-100 text-red-800 p-4 mb-4 rounded">
+          Failed to load notes. Check data/manual.json.
+        </div>
+      )}
+
+      {/* Add note form */}
+      <section class="mb-8" aria-label="Add a note">
+        <form id="add-note-form" class="flex flex-col gap-2">
+          <textarea
+            id="note-text"
+            name="text"
+            rows="3"
+            maxlength="2000"
+            placeholder="Type a note… mention a project name to auto-assign it."
+            class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-900 resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
+          ></textarea>
+          <div class="flex items-center gap-3">
+            <button
+              type="submit"
+              id="add-note-btn"
+              class="px-4 py-1.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:opacity-50"
+            >
+              Add note
+            </button>
+            <span id="add-note-error" class="text-sm text-red-600 hidden"></span>
+          </div>
+        </form>
+      </section>
+
+      {notes.length === 0 && !loadError && (
+        <p class="text-sm text-gray-400 italic">No notes yet.</p>
+      )}
+
+      {notes.length > 0 && (
+        <div class="flex flex-col gap-8">
+          {/* Unsorted / New Ideas section — always at top */}
+          {unsorted.length > 0 && (
+            <section aria-labelledby="section-unsorted">
+              <h2 id="section-unsorted" class="text-base font-semibold text-gray-700 mb-3">
+                Unsorted / New Ideas
+              </h2>
+              <ul class="flex flex-col gap-3">
+                {unsorted.map((note) => (
+                  <li class="bg-white border border-gray-200 rounded p-3 flex flex-col gap-2">
+                    <p class="text-sm text-gray-900 whitespace-pre-wrap">{note.text}</p>
+                    <div class="flex items-center gap-3 flex-wrap">
+                      <span class="text-xs text-gray-400">{daysAgoLabel(note.created)}</span>
+                      <select
+                        class="note-reassign text-xs border border-gray-300 rounded px-2 py-0.5 text-gray-700"
+                        data-note-id={note.id}
+                        data-current={note.projectId ?? ''}
+                      >
+                        <option value="">— unsorted —</option>
+                        {projects.map((p) => (
+                          <option value={p.id} selected={note.projectId === p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        class="note-delete text-xs text-red-500 hover:text-red-700 ml-auto"
+                        data-note-id={note.id}
+                        aria-label="Delete note"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {/* Per-project sections */}
+          {projects.filter((p) => byProject.has(p.id)).map((project) => {
+            const projectNotes = byProject.get(project.id)!;
+            return (
+              <section aria-labelledby={`section-${project.id}`}>
+                <h2 id={`section-${project.id}`} class="text-base font-semibold text-gray-700 mb-3">
+                  {project.name}
+                </h2>
+                <ul class="flex flex-col gap-3">
+                  {projectNotes.map((note) => (
+                    <li class="bg-white border border-gray-200 rounded p-3 flex flex-col gap-2">
+                      <p class="text-sm text-gray-900 whitespace-pre-wrap">{note.text}</p>
+                      <div class="flex items-center gap-3 flex-wrap">
+                        <span class="text-xs text-gray-400">{daysAgoLabel(note.created)}</span>
+                        <select
+                          class="note-reassign text-xs border border-gray-300 rounded px-2 py-0.5 text-gray-700"
+                          data-note-id={note.id}
+                          data-current={note.projectId ?? ''}
+                        >
+                          <option value="">— unsorted —</option>
+                          {projects.map((p) => (
+                            <option value={p.id} selected={note.projectId === p.id}>
+                              {p.name}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          class="note-delete text-xs text-red-500 hover:text-red-700 ml-auto"
+                          data-note-id={note.id}
+                          aria-label="Delete note"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            );
+          })}
+        </div>
+      )}
+    </div>
+
+    <script>
+      // ---------------------------------------------------------------------------
+      // Add note
+      // ---------------------------------------------------------------------------
+      const addForm = document.getElementById('add-note-form') as HTMLFormElement | null;
+      const addBtn = document.getElementById('add-note-btn') as HTMLButtonElement | null;
+      const addError = document.getElementById('add-note-error') as HTMLElement | null;
+      const noteTextarea = document.getElementById('note-text') as HTMLTextAreaElement | null;
+
+      addForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const text = noteTextarea?.value ?? '';
+        if (!text.trim()) return;
+
+        if (addBtn) addBtn.disabled = true;
+        if (addError) { addError.textContent = ''; addError.classList.add('hidden'); }
+
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 10_000);
+
+        try {
+          const res = await fetch('/api/note', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text }),
+            signal: controller.signal,
+          });
+          const json = await res.json() as { ok: boolean; error?: string };
+          if (json.ok) {
+            window.location.reload();
+          } else {
+            if (addError) {
+              addError.textContent = json.error ?? 'Failed to add note.';
+              addError.classList.remove('hidden');
+            }
+          }
+        } catch (err) {
+          if (addError) {
+            addError.textContent = (err as Error).name === 'AbortError'
+              ? 'Request timed out.'
+              : 'Failed to add note.';
+            addError.classList.remove('hidden');
+          }
+        } finally {
+          clearTimeout(timer);
+          if (addBtn) addBtn.disabled = false;
+        }
+      });
+
+      // ---------------------------------------------------------------------------
+      // Delete note
+      // ---------------------------------------------------------------------------
+      document.querySelectorAll<HTMLButtonElement>('.note-delete').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const noteId = btn.dataset.noteId;
+          if (!noteId) return;
+
+          btn.disabled = true;
+
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 10_000);
+
+          try {
+            const res = await fetch('/api/note', {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: noteId }),
+              signal: controller.signal,
+            });
+            const json = await res.json() as { ok: boolean; error?: string };
+            if (json.ok) {
+              window.location.reload();
+            } else {
+              console.error('[notes] delete failed:', json.error);
+              btn.disabled = false;
+            }
+          } catch (err) {
+            console.error('[notes] delete error:', err);
+            btn.disabled = false;
+          } finally {
+            clearTimeout(timer);
+          }
+        });
+      });
+
+      // ---------------------------------------------------------------------------
+      // Reassign note (PATCH)
+      // ---------------------------------------------------------------------------
+      document.querySelectorAll<HTMLSelectElement>('.note-reassign').forEach((select) => {
+        select.addEventListener('change', async () => {
+          const noteId = select.dataset.noteId;
+          if (!noteId) return;
+
+          select.disabled = true;
+
+          const projectId = select.value === '' ? null : select.value;
+
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 10_000);
+
+          try {
+            const res = await fetch('/api/note', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: noteId, projectId }),
+              signal: controller.signal,
+            });
+            const json = await res.json() as { ok: boolean; error?: string };
+            if (json.ok) {
+              window.location.reload();
+            } else {
+              console.error('[notes] reassign failed:', json.error);
+              select.disabled = false;
+            }
+          } catch (err) {
+            console.error('[notes] reassign error:', err);
+            select.disabled = false;
+          } finally {
+            clearTimeout(timer);
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

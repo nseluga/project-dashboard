@@ -14,10 +14,18 @@ export interface TokenLogEntry {
   created: string;
 }
 
+export interface NoteEntry {
+  id: string;
+  text: string;
+  projectId: string | null;
+  created: string;
+}
+
 export interface ManualData {
   overrides: Record<string, Record<string, string | null>>;
   due_dates: Record<string, string>;
   inbox: InboxItem[];
   hidden_fields: Record<string, { due_date?: boolean; priority?: boolean }>;
   token_log: TokenLogEntry[];
+  notes: NoteEntry[];
 }

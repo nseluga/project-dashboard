@@ -7,14 +7,22 @@ vi.mock('../src/lib/manual.js', () => ({
   writeManual: vi.fn(),
 }));
 
+// Mock getMergedProjects for note route tests
+vi.mock('../src/lib/merge.js', () => ({
+  getMergedProjects: vi.fn(),
+}));
+
 const { POST: dueDatePOST } = await import('../src/pages/api/due-date.js');
 const { POST: overridePOST } = await import('../src/pages/api/override.js');
 const { POST: fieldVisibilityPOST } = await import('../src/pages/api/field-visibility.js');
 const { POST: tokenLogPOST, DELETE: tokenLogDELETE } = await import('../src/pages/api/token-log.js');
+const { POST: notePOST, DELETE: noteDELETE, PATCH: notePATCH } = await import('../src/pages/api/note.js');
 const { readManual, writeManual } = await import('../src/lib/manual.js');
+const { getMergedProjects } = await import('../src/lib/merge.js');
 
 const mockReadManual = vi.mocked(readManual);
 const mockWriteManual = vi.mocked(writeManual);
+const mockGetMergedProjects = vi.mocked(getMergedProjects);
 
 /** Build a minimal Astro APIContext with just the request field set. */
 function makeContext(body: unknown): Parameters<typeof dueDatePOST>[0] {
@@ -34,6 +42,7 @@ function makeManual(overrides: Partial<ManualData> = {}): ManualData {
     inbox: [],
     hidden_fields: {},
     token_log: [],
+    notes: [],
     ...overrides,
   };
 }
@@ -611,6 +620,261 @@ describe('DELETE /api/token-log', () => {
       }),
     } as Parameters<typeof tokenLogDELETE>[0];
     const res = await tokenLogDELETE(ctx);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/note
+// ---------------------------------------------------------------------------
+
+function makeNoteContext(body: unknown, method = 'POST'): Parameters<typeof notePOST>[0] {
+  return {
+    request: new Request('http://localhost/api/note', {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+  } as Parameters<typeof notePOST>[0];
+}
+
+const mockProject = {
+  id: 'alpha',
+  name: 'Alpha Project',
+  status: 'active',
+  priority: 'medium',
+  summary: null,
+  repo: null,
+  github: null,
+  tags: [],
+  next_step: null,
+  last_active: '2026-07-01T00:00:00.000Z',
+  days_since_active: 8,
+  due_date: null,
+  overdue: false,
+  hidden_fields: { due_date: false, priority: false },
+  total_tokens: 0,
+};
+
+describe('POST /api/note', () => {
+  it('creates a note and returns { ok: true, projectId }', async () => {
+    const manual = makeManual({ notes: [] });
+    mockReadManual.mockReturnValue(manual);
+    mockGetMergedProjects.mockResolvedValue([mockProject]);
+
+    const ctx = makeNoteContext({ text: 'Working on Alpha Project today' });
+    const res = await notePOST(ctx);
+
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.ok).toBe(true);
+    expect(json.projectId).toBe('alpha');
+    expect(mockWriteManual).toHaveBeenCalled();
+  });
+
+  it('saves note with null projectId when no project matches', async () => {
+    const manual = makeManual({ notes: [] });
+    mockReadManual.mockReturnValue(manual);
+    mockGetMergedProjects.mockResolvedValue([mockProject]);
+
+    const ctx = makeNoteContext({ text: 'just a general idea' });
+    const res = await notePOST(ctx);
+
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.ok).toBe(true);
+    expect(json.projectId).toBeNull();
+  });
+
+  it('returns 400 when text is missing', async () => {
+    const ctx = makeNoteContext({ text: '' });
+    const res = await notePOST(ctx);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+  });
+
+  it('returns 400 when text exceeds 2000 chars', async () => {
+    const ctx = makeNoteContext({ text: 'a'.repeat(2001) });
+    const res = await notePOST(ctx);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+    expect(json.error).toMatch(/2000/);
+  });
+
+  it('returns 400 when body is a JSON array (shape guard)', async () => {
+    const ctx = {
+      request: new Request('http://localhost/api/note', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify([{ text: 'hi' }]),
+      }),
+    } as Parameters<typeof notePOST>[0];
+    const res = await notePOST(ctx);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/note
+// ---------------------------------------------------------------------------
+
+describe('DELETE /api/note', () => {
+  it('removes a note by id and returns { ok: true }', async () => {
+    const existingNote = { id: 'note-1', text: 'hello', projectId: null, created: '2026-07-09T00:00:00.000Z' };
+    const manual = makeManual({ notes: [existingNote] });
+    mockReadManual.mockReturnValue(manual);
+
+    const ctx = {
+      request: new Request('http://localhost/api/note', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: 'note-1' }),
+      }),
+    } as Parameters<typeof noteDELETE>[0];
+    const res = await noteDELETE(ctx);
+
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.ok).toBe(true);
+  });
+
+  it('returns 404 when id not found', async () => {
+    const manual = makeManual({ notes: [] });
+    mockReadManual.mockReturnValue(manual);
+
+    const ctx = {
+      request: new Request('http://localhost/api/note', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: 'nonexistent' }),
+      }),
+    } as Parameters<typeof noteDELETE>[0];
+    const res = await noteDELETE(ctx);
+
+    expect(res.status).toBe(404);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+  });
+
+  it('returns 400 when id is missing', async () => {
+    const ctx = {
+      request: new Request('http://localhost/api/note', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      }),
+    } as Parameters<typeof noteDELETE>[0];
+    const res = await noteDELETE(ctx);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /api/note
+// ---------------------------------------------------------------------------
+
+describe('PATCH /api/note', () => {
+  it('updates projectId to a known project and returns { ok: true }', async () => {
+    const existingNote = { id: 'note-1', text: 'hello', projectId: null, created: '2026-07-09T00:00:00.000Z' };
+    const manual = makeManual({ notes: [existingNote] });
+    mockReadManual.mockReturnValue(manual);
+    mockGetMergedProjects.mockResolvedValue([mockProject]);
+
+    const ctx = {
+      request: new Request('http://localhost/api/note', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: 'note-1', projectId: 'alpha' }),
+      }),
+    } as Parameters<typeof notePATCH>[0];
+    const res = await notePATCH(ctx);
+
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.ok).toBe(true);
+  });
+
+  it('allows setting projectId to null (unsorted)', async () => {
+    const existingNote = { id: 'note-1', text: 'hello', projectId: 'alpha', created: '2026-07-09T00:00:00.000Z' };
+    const manual = makeManual({ notes: [existingNote] });
+    mockReadManual.mockReturnValue(manual);
+
+    const ctx = {
+      request: new Request('http://localhost/api/note', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: 'note-1', projectId: null }),
+      }),
+    } as Parameters<typeof notePATCH>[0];
+    const res = await notePATCH(ctx);
+
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.ok).toBe(true);
+  });
+
+  it('returns 400 when projectId is an unknown project', async () => {
+    const existingNote = { id: 'note-1', text: 'hello', projectId: null, created: '2026-07-09T00:00:00.000Z' };
+    const manual = makeManual({ notes: [existingNote] });
+    mockReadManual.mockReturnValue(manual);
+    mockGetMergedProjects.mockResolvedValue([mockProject]);
+
+    const ctx = {
+      request: new Request('http://localhost/api/note', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: 'note-1', projectId: 'unknown-project' }),
+      }),
+    } as Parameters<typeof notePATCH>[0];
+    const res = await notePATCH(ctx);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+    expect(json.error).toMatch(/unknown projectId/);
+  });
+
+  it('returns 404 when note id not found', async () => {
+    const manual = makeManual({ notes: [] });
+    mockReadManual.mockReturnValue(manual);
+    mockGetMergedProjects.mockResolvedValue([mockProject]);
+
+    const ctx = {
+      request: new Request('http://localhost/api/note', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: 'nonexistent', projectId: 'alpha' }),
+      }),
+    } as Parameters<typeof notePATCH>[0];
+    const res = await notePATCH(ctx);
+
+    expect(res.status).toBe(404);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+  });
+
+  it('returns 400 when id field is missing', async () => {
+    const ctx = {
+      request: new Request('http://localhost/api/note', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: 'alpha' }),
+      }),
+    } as Parameters<typeof notePATCH>[0];
+    const res = await notePATCH(ctx);
 
     expect(res.status).toBe(400);
     const json = await res.json();

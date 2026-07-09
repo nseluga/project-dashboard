@@ -11,6 +11,7 @@ const EMPTY_MANUAL: ManualData = {
   inbox: [],
   hidden_fields: {},
   token_log: [],
+  notes: [],
 };
 
 export function readManual(): ManualData {
@@ -20,7 +21,7 @@ export function readManual(): ManualData {
     raw = readFileSync(filePath, 'utf-8');
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === 'ENOENT') {
-      return { overrides: {}, due_dates: {}, inbox: [], hidden_fields: {}, token_log: [] };
+      return { overrides: {}, due_dates: {}, inbox: [], hidden_fields: {}, token_log: [], notes: [] };
     }
     throw new Error(`[manual] failed to read ${filePath}: ${(e as Error).message}`);
   }
@@ -38,6 +39,7 @@ export function readManual(): ManualData {
     inbox: [...(parsed.inbox ?? [])],
     hidden_fields: Object.fromEntries(Object.entries(parsed.hidden_fields ?? {}).map(([k, v]) => [k, { ...v }])),
     token_log: [...(parsed.token_log ?? [])],
+    notes: [...(parsed.notes ?? [])],
   };
 }
 

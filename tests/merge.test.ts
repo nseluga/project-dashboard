@@ -43,6 +43,7 @@ function makeManual(overrides: Partial<ManualData> = {}): ManualData {
     inbox: [],
     hidden_fields: {},
     token_log: [],
+    notes: [],
     ...overrides,
   };
 }
