@@ -16,7 +16,7 @@ let loadError = false;
 try {
   const manual = readManual();
   tokenLog = manual.token_log;
-  allProjects = await getMergedProjects();
+  allProjects = await getMergedProjects(manual);
 } catch (err) {
   console.error('[dashboard] getMergedProjects() failed:', err);
   loadError = true;

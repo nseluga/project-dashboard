@@ -81,6 +81,13 @@ export const DELETE: APIRoute = async ({ request }) => {
     );
   }
 
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    return new Response(
+      JSON.stringify({ ok: false, error: 'body must be a JSON object' }),
+      { status: 400, headers: JSON_HEADERS },
+    );
+  }
+
   const { id } = body as Record<string, unknown>;
 
   if (typeof id !== 'string' || id.trim() === '') {
