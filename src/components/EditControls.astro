@@ -30,36 +30,65 @@ const currentPriority = project.priority ?? '__reset__';
 <div class="mt-3 pt-3 border-t border-gray-100 flex flex-col gap-3" data-project-id={project.id}>
 
   <!-- Due date control -->
-  <fieldset class="flex flex-col gap-1.5">
-    <legend class="text-xs font-semibold uppercase tracking-wide text-gray-400">Due date</legend>
-    <div class="flex items-center gap-2 flex-wrap">
-      <input
-        type="date"
-        id={`due-date-${project.id}`}
-        name="date"
-        value={project.due_date ?? ''}
-        aria-label={`Due date for ${project.name}`}
-        class="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-      />
-      <button
-        type="button"
-        data-action="set-due-date"
-        aria-label={`Set due date for ${project.name}`}
-        class="rounded bg-blue-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
-      >
-        Set
-      </button>
-      <button
-        type="button"
-        data-action="clear-due-date"
-        aria-label={`Clear due date for ${project.name}`}
-        class="rounded border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:opacity-50"
-      >
-        Clear
-      </button>
+  {!project.hidden_fields.due_date ? (
+    <fieldset class="flex flex-col gap-1.5">
+      <div class="flex items-center justify-between gap-2">
+        <legend class="text-xs font-semibold uppercase tracking-wide text-gray-400">Due date</legend>
+        <button
+          type="button"
+          data-action="hide-field"
+          data-field="due_date"
+          aria-label={`Hide due date field for ${project.name}`}
+          class="rounded border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400"
+        >
+          Hide
+        </button>
+      </div>
+      <div class="flex items-center gap-2 flex-wrap">
+        <input
+          type="date"
+          id={`due-date-${project.id}`}
+          name="date"
+          value={project.due_date ?? ''}
+          aria-label={`Due date for ${project.name}`}
+          class="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+        />
+        <button
+          type="button"
+          data-action="set-due-date"
+          aria-label={`Set due date for ${project.name}`}
+          class="rounded bg-blue-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
+        >
+          Set
+        </button>
+        <button
+          type="button"
+          data-action="clear-due-date"
+          aria-label={`Clear due date for ${project.name}`}
+          class="rounded border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:opacity-50"
+        >
+          Clear
+        </button>
+      </div>
+      <p class="text-xs text-red-600 hidden" data-error="due-date" role="alert" aria-live="polite"></p>
+    </fieldset>
+  ) : (
+    <div class="flex flex-col gap-1.5">
+      <div class="flex items-center justify-between gap-2">
+        <span class="text-xs font-semibold uppercase tracking-wide text-gray-300">Due date (hidden)</span>
+        <button
+          type="button"
+          data-action="show-field"
+          data-field="due_date"
+          aria-label={`Show due date field for ${project.name}`}
+          class="rounded border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400"
+        >
+          Show due date
+        </button>
+      </div>
+      <p class="text-xs text-red-600 hidden" data-error="field-visibility-due_date" role="alert" aria-live="polite"></p>
     </div>
-    <p class="text-xs text-red-600 hidden" data-error="due-date" role="alert" aria-live="polite"></p>
-  </fieldset>
+  )}
 
   <!-- Status override control -->
   <div class="flex flex-col gap-1.5">
@@ -84,26 +113,55 @@ const currentPriority = project.priority ?? '__reset__';
   </div>
 
   <!-- Priority override control -->
-  <div class="flex flex-col gap-1.5">
-    <span class="text-xs font-semibold uppercase tracking-wide text-gray-400">Priority override</span>
-    <select
-      id={`priority-${project.id}`}
-      name="priority"
-      data-action="override-priority"
-      aria-label={`Priority override for ${project.name}`}
-      class="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
-    >
-      {PRIORITY_OPTIONS.map((opt) => (
-        <option
-          value={opt.value}
-          selected={opt.value === currentPriority || (opt.value === '__reset__' && !PRIORITY_OPTIONS.slice(1).some(o => o.value === currentPriority))}
+  {!project.hidden_fields.priority ? (
+    <div class="flex flex-col gap-1.5">
+      <div class="flex items-center justify-between gap-2">
+        <span class="text-xs font-semibold uppercase tracking-wide text-gray-400">Priority override</span>
+        <button
+          type="button"
+          data-action="hide-field"
+          data-field="priority"
+          aria-label={`Hide priority field for ${project.name}`}
+          class="rounded border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400"
         >
-          {opt.label}
-        </option>
-      ))}
-    </select>
-    <p class="text-xs text-red-600 hidden" data-error="priority" role="alert" aria-live="polite"></p>
-  </div>
+          Hide
+        </button>
+      </div>
+      <select
+        id={`priority-${project.id}`}
+        name="priority"
+        data-action="override-priority"
+        aria-label={`Priority override for ${project.name}`}
+        class="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
+      >
+        {PRIORITY_OPTIONS.map((opt) => (
+          <option
+            value={opt.value}
+            selected={opt.value === currentPriority || (opt.value === '__reset__' && !PRIORITY_OPTIONS.slice(1).some(o => o.value === currentPriority))}
+          >
+            {opt.label}
+          </option>
+        ))}
+      </select>
+      <p class="text-xs text-red-600 hidden" data-error="priority" role="alert" aria-live="polite"></p>
+    </div>
+  ) : (
+    <div class="flex flex-col gap-1.5">
+      <div class="flex items-center justify-between gap-2">
+        <span class="text-xs font-semibold uppercase tracking-wide text-gray-300">Priority (hidden)</span>
+        <button
+          type="button"
+          data-action="show-field"
+          data-field="priority"
+          aria-label={`Show priority field for ${project.name}`}
+          class="rounded border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400"
+        >
+          Show priority
+        </button>
+      </div>
+      <p class="text-xs text-red-600 hidden" data-error="field-visibility-priority" role="alert" aria-live="polite"></p>
+    </div>
+  )}
 
 </div>
 
@@ -221,6 +279,39 @@ const currentPriority = project.priority ?? '__reset__';
         showError('priority', (e as Error).message);
         prioritySelect.disabled = false;
       }
+    });
+
+    // --- Field visibility toggles ---
+    panel.querySelectorAll<HTMLButtonElement>('[data-action="hide-field"]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const field = btn.dataset.field as string;
+        const errorKey = `field-visibility-${field}`;
+        clearError(errorKey);
+        btn.disabled = true;
+        try {
+          await postJson('/api/field-visibility', { projectId, field, hidden: true });
+          window.location.reload();
+        } catch (e) {
+          showError(errorKey, (e as Error).message);
+          btn.disabled = false;
+        }
+      });
+    });
+
+    panel.querySelectorAll<HTMLButtonElement>('[data-action="show-field"]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const field = btn.dataset.field as string;
+        const errorKey = `field-visibility-${field}`;
+        clearError(errorKey);
+        btn.disabled = true;
+        try {
+          await postJson('/api/field-visibility', { projectId, field, hidden: false });
+          window.location.reload();
+        } catch (e) {
+          showError(errorKey, (e as Error).message);
+          btn.disabled = false;
+        }
+      });
     });
   });
 </script>

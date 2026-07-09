@@ -41,6 +41,7 @@ function makeManual(overrides: Partial<ManualData> = {}): ManualData {
     overrides: {},
     due_dates: {},
     inbox: [],
+    hidden_fields: {},
     ...overrides,
   };
 }
@@ -170,6 +171,59 @@ describe('getMergedProjects()', () => {
       expect(b.status).toBe('paused'); // no override for proj-b
       expect(b.due_date).toBe(tomorrow);
       expect(b.overdue).toBe(false);
+    });
+  });
+
+  describe('hidden_fields', () => {
+    it('defaults both hidden_fields to false when no entry in manual', async () => {
+      mockGetProjects.mockResolvedValue([makeProject({ id: 'alpha' })]);
+      mockReadManual.mockReturnValue(makeManual());
+
+      const results = await getMergedProjects();
+
+      expect(results[0].hidden_fields).toEqual({ due_date: false, priority: false });
+    });
+
+    it('reflects true when due_date is hidden', async () => {
+      mockGetProjects.mockResolvedValue([makeProject({ id: 'alpha' })]);
+      mockReadManual.mockReturnValue(makeManual({
+        hidden_fields: { alpha: { due_date: true } },
+      }));
+
+      const results = await getMergedProjects();
+
+      expect(results[0].hidden_fields.due_date).toBe(true);
+      expect(results[0].hidden_fields.priority).toBe(false);
+    });
+
+    it('reflects true when priority is hidden', async () => {
+      mockGetProjects.mockResolvedValue([makeProject({ id: 'beta' })]);
+      mockReadManual.mockReturnValue(makeManual({
+        hidden_fields: { beta: { priority: true } },
+      }));
+
+      const results = await getMergedProjects();
+
+      expect(results[0].hidden_fields.due_date).toBe(false);
+      expect(results[0].hidden_fields.priority).toBe(true);
+    });
+
+    it('hidden_fields for one project does not affect another', async () => {
+      mockGetProjects.mockResolvedValue([
+        makeProject({ id: 'proj-x' }),
+        makeProject({ id: 'proj-y' }),
+      ]);
+      mockReadManual.mockReturnValue(makeManual({
+        hidden_fields: { 'proj-x': { due_date: true, priority: true } },
+      }));
+
+      const results = await getMergedProjects();
+
+      const x = results.find((p) => p.id === 'proj-x')!;
+      expect(x.hidden_fields).toEqual({ due_date: true, priority: true });
+
+      const y = results.find((p) => p.id === 'proj-y')!;
+      expect(y.hidden_fields).toEqual({ due_date: false, priority: false });
     });
   });
 });

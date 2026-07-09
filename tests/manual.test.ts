@@ -31,7 +31,7 @@ const { readManual, writeManual } = await import('../src/lib/manual.js');
 describe('readManual()', () => {
   it('returns empty shape when data/manual.json is absent', () => {
     const result = readManual();
-    expect(result).toEqual({ overrides: {}, due_dates: {}, inbox: [] });
+    expect(result).toEqual({ overrides: {}, due_dates: {}, inbox: [], hidden_fields: {} });
   });
 
   it('returns parsed data when data/manual.json exists', () => {
@@ -68,13 +68,13 @@ describe('writeManual()', () => {
   });
 
   it('produces data/manual.json at the expected path', () => {
-    writeManual({ overrides: {}, due_dates: {}, inbox: [] });
+    writeManual({ overrides: {}, due_dates: {}, inbox: [], hidden_fields: {} });
     const exists = fs.existsSync(path.join(dataDir, 'manual.json'));
     expect(exists).toBe(true);
   });
 
   it('uses atomic rename: .tmp file is gone after write completes', () => {
-    writeManual({ overrides: {}, due_dates: {}, inbox: [] });
+    writeManual({ overrides: {}, due_dates: {}, inbox: [], hidden_fields: {} });
     const tmpExists = fs.existsSync(path.join(dataDir, 'manual.json.tmp'));
     expect(tmpExists).toBe(false);
   });
@@ -83,7 +83,7 @@ describe('writeManual()', () => {
     // Pre-existing final file has stale content — a non-atomic write that crashes
     // after opening the file could leave it empty. An atomic rename guarantees
     // the file is either the old content or the new content, never partial.
-    const staleData = { overrides: {}, due_dates: { stale: '2025-01-01' }, inbox: [] };
+    const staleData = { overrides: {}, due_dates: { stale: '2025-01-01' }, inbox: [], hidden_fields: {} };
     fs.writeFileSync(path.join(dataDir, 'manual.json'), JSON.stringify(staleData), 'utf-8');
 
     const newData = {

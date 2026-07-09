@@ -18,12 +18,18 @@ export async function getMergedProjects(): Promise<MergedProject[]> {
     );
     const due_date = manual.due_dates[project.id] ?? null;
     const overdue = due_date !== null && due_date < today;
+    const rawHidden = manual.hidden_fields[project.id] ?? {};
+    const hidden_fields = {
+      due_date: rawHidden.due_date ?? false,
+      priority: rawHidden.priority ?? false,
+    };
 
     return {
       ...project,
       ...overrideFields,
       due_date,
       overdue,
+      hidden_fields,
     };
   });
 }

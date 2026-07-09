@@ -10,6 +10,7 @@ vi.mock('../src/lib/manual.js', () => ({
 const { POST: inboxPOST, DELETE: inboxDELETE } = await import('../src/pages/api/inbox.js');
 const { POST: dueDatePOST } = await import('../src/pages/api/due-date.js');
 const { POST: overridePOST } = await import('../src/pages/api/override.js');
+const { POST: fieldVisibilityPOST } = await import('../src/pages/api/field-visibility.js');
 const { readManual, writeManual } = await import('../src/lib/manual.js');
 
 const mockReadManual = vi.mocked(readManual);
@@ -31,6 +32,7 @@ function makeManual(overrides: Partial<ManualData> = {}): ManualData {
     overrides: {},
     due_dates: {},
     inbox: [],
+    hidden_fields: {},
     ...overrides,
   };
 }
@@ -393,5 +395,151 @@ describe('POST /api/override', () => {
     const res = await overridePOST(ctx);
 
     expect(res.headers.get('content-type')).toBe('application/json');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/field-visibility
+// ---------------------------------------------------------------------------
+
+describe('POST /api/field-visibility', () => {
+  it('hides due_date for a project (hidden: true)', async () => {
+    mockReadManual.mockReturnValue(makeManual());
+
+    const ctx = makeContext({ projectId: 'alpha', field: 'due_date', hidden: true });
+    const res = await fieldVisibilityPOST(ctx);
+
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json).toEqual({ ok: true });
+
+    const written: ManualData = mockWriteManual.mock.calls[0][0];
+    expect(written.hidden_fields['alpha']['due_date']).toBe(true);
+  });
+
+  it('hides priority for a project (hidden: true)', async () => {
+    mockReadManual.mockReturnValue(makeManual());
+
+    const ctx = makeContext({ projectId: 'beta', field: 'priority', hidden: true });
+    const res = await fieldVisibilityPOST(ctx);
+
+    expect(res.status).toBe(200);
+    const written: ManualData = mockWriteManual.mock.calls[0][0];
+    expect(written.hidden_fields['beta']['priority']).toBe(true);
+  });
+
+  it('shows due_date by removing hidden flag (hidden: false)', async () => {
+    mockReadManual.mockReturnValue(makeManual({
+      hidden_fields: { alpha: { due_date: true } },
+    }));
+
+    const ctx = makeContext({ projectId: 'alpha', field: 'due_date', hidden: false });
+    const res = await fieldVisibilityPOST(ctx);
+
+    expect(res.status).toBe(200);
+    const written: ManualData = mockWriteManual.mock.calls[0][0];
+    // Key should be deleted, project entry cleaned up since it was the last field
+    expect('alpha' in written.hidden_fields).toBe(false);
+  });
+
+  it('shows priority by removing hidden flag, retains due_date entry', async () => {
+    mockReadManual.mockReturnValue(makeManual({
+      hidden_fields: { alpha: { due_date: true, priority: true } },
+    }));
+
+    const ctx = makeContext({ projectId: 'alpha', field: 'priority', hidden: false });
+    const res = await fieldVisibilityPOST(ctx);
+
+    expect(res.status).toBe(200);
+    const written: ManualData = mockWriteManual.mock.calls[0][0];
+    expect('priority' in (written.hidden_fields['alpha'] ?? {})).toBe(false);
+    expect(written.hidden_fields['alpha']['due_date']).toBe(true);
+  });
+
+  it('cleans up empty project entry when last hidden field is shown', async () => {
+    mockReadManual.mockReturnValue(makeManual({
+      hidden_fields: { beta: { priority: true } },
+    }));
+
+    const ctx = makeContext({ projectId: 'beta', field: 'priority', hidden: false });
+    await fieldVisibilityPOST(ctx);
+
+    const written: ManualData = mockWriteManual.mock.calls[0][0];
+    expect('beta' in written.hidden_fields).toBe(false);
+  });
+
+  it('returns 400 for invalid field name', async () => {
+    mockReadManual.mockReturnValue(makeManual());
+
+    const ctx = makeContext({ projectId: 'alpha', field: 'status', hidden: true });
+    const res = await fieldVisibilityPOST(ctx);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+    expect(mockWriteManual).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 for field "due-date" (hyphen, not underscore)', async () => {
+    mockReadManual.mockReturnValue(makeManual());
+
+    const ctx = makeContext({ projectId: 'alpha', field: 'due-date', hidden: true });
+    const res = await fieldVisibilityPOST(ctx);
+
+    expect(res.status).toBe(400);
+    expect(mockWriteManual).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when projectId is missing', async () => {
+    mockReadManual.mockReturnValue(makeManual());
+
+    const ctx = makeContext({ field: 'due_date', hidden: true });
+    const res = await fieldVisibilityPOST(ctx);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+  });
+
+  it('returns 400 when hidden is not a boolean', async () => {
+    mockReadManual.mockReturnValue(makeManual());
+
+    const ctx = makeContext({ projectId: 'alpha', field: 'due_date', hidden: 'true' });
+    const res = await fieldVisibilityPOST(ctx);
+
+    expect(res.status).toBe(400);
+    expect(mockWriteManual).not.toHaveBeenCalled();
+  });
+
+  it('returns 500 when readManual throws', async () => {
+    mockReadManual.mockImplementation(() => { throw new Error('disk read failure'); });
+
+    const ctx = makeContext({ projectId: 'alpha', field: 'due_date', hidden: true });
+    const res = await fieldVisibilityPOST(ctx);
+
+    expect(res.status).toBe(500);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+  });
+
+  it('returns Content-Type: application/json', async () => {
+    mockReadManual.mockReturnValue(makeManual());
+    const ctx = makeContext({ projectId: 'alpha', field: 'due_date', hidden: true });
+    const res = await fieldVisibilityPOST(ctx);
+
+    expect(res.headers.get('content-type')).toBe('application/json');
+  });
+
+  it('does not disturb other projects hidden_fields when toggling one', async () => {
+    mockReadManual.mockReturnValue(makeManual({
+      hidden_fields: { gamma: { priority: true } },
+    }));
+
+    const ctx = makeContext({ projectId: 'delta', field: 'due_date', hidden: true });
+    await fieldVisibilityPOST(ctx);
+
+    const written: ManualData = mockWriteManual.mock.calls[0][0];
+    expect(written.hidden_fields['gamma']['priority']).toBe(true);
+    expect(written.hidden_fields['delta']['due_date']).toBe(true);
   });
 });

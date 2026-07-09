@@ -21,4 +21,6 @@ export interface MergedProject extends Project {
   due_date: string | null;
   /** true when due_date is present and strictly before today */
   overdue: boolean;
+  /** Per-field visibility toggles; false means visible (default) */
+  hidden_fields: { due_date: boolean; priority: boolean };
 }
