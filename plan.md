@@ -94,7 +94,7 @@
 - **track:** full
 - **owns_files:** `src/pages/api/token-log.ts` (new), `src/components/TokenTracker.astro` (new), `src/lib/manual.ts` (extend), `src/types/manual.ts` (extend), `src/pages/index.astro` (add TokenTracker at bottom)
 - **blocked_by:** 6.3
-- **blocks:** nothing
+- **blocks:** 6.5
 - **task:** Add lightweight manual Claude token usage logging per project. Implementation:
   1. Extend `ManualData` in `src/types/manual.ts` with `token_log: TokenLogEntry[]` where `TokenLogEntry = { id: string; projectId: string; tokens: number; note: string | null; created: string }`. Default `token_log: []` in `readManual()`.
   2. New API route `src/pages/api/token-log.ts`:
@@ -108,6 +108,28 @@
      - Empty state: "No token logs yet." when the list is empty.
 - **done when:** logging a token entry persists and appears in the table; deleting removes it; a project card with logged tokens shows the total; the token count in the project card updates correctly after logging and deleting; invalid input (non-numeric tokens, zero/negative tokens, missing projectId) returns 400; empty state renders correctly; tests cover the API routes and the `total_tokens` merge computation.
 
+### 6.5 — Smart notepad with auto-categorization
+- **status:** todo
+- **track:** full
+- **owns_files:** `src/pages/notes.astro` (new page), `src/pages/api/note.ts` (new), `src/lib/manual.ts` (extend), `src/types/manual.ts` (extend), `src/lib/autoTag.ts` (new), `src/pages/index.astro` (add nav link)
+- **blocked_by:** 6.4
+- **blocks:** 7.1
+- **task:** Build a `/notes` page — a scratchpad for miscellaneous ideas and thoughts that auto-categorizes under existing projects. Implementation:
+  1. **Data model:** extend `ManualData` in `src/types/manual.ts` with `notes: NoteEntry[]` where `NoteEntry = { id: string; text: string; projectId: string | null; created: string }`. Default `notes: []` in `readManual()`. `projectId: null` means unsorted.
+  2. **Auto-tagging:** `src/lib/autoTag.ts` — implement `autoTag(text: string, projectIds: string[], projectNames: string[]): string | null`. Scans `text` (case-insensitive) for exact matches of each project's `id` or `name`. Returns the first matching project's `id`, or `null` if none match. When multiple projects match, prefer the one whose name/id appears earliest in the text.
+  3. **API routes** in `src/pages/api/note.ts`:
+     - `POST` — body `{ text: string }`. Validates `text` is a non-empty string (max 2000 chars). Calls `autoTag(text, ...)` using all known project IDs/names from `readManual()` + the project list. Saves `{ id: crypto.randomUUID(), text: text.trim(), projectId, created: new Date().toISOString() }`. Returns `{ ok: true, projectId }`.
+     - `DELETE` — body `{ id: string }`. Removes note with that id. Returns `{ ok: true }` or `404`.
+     - `PATCH` — body `{ id: string, projectId: string | null }`. Updates `projectId` for manual reassignment. Validates `projectId` is a known project id or `null`. Returns `{ ok: true }`.
+  4. **`/notes` page** (`src/pages/notes.astro`): SSR, calls `getMergedProjects()` and `readManual()`. Groups notes by `projectId`:
+     - Per project with notes: show a section with the project name as heading and its notes listed below.
+     - Notes with `projectId: null` shown in an **"Unsorted / New Ideas"** section at the top.
+     - Each note shows: text, "today" / "N days ago" date, a project reassignment `<select>` (all project names + "— unsorted —"), and a "×" delete button. Reassignment `<select>` POSTs PATCH to `/api/note` on change and reloads.
+     - A `<textarea>` at the top of the page with an "Add note" button. POSTs to `/api/note`. Reloads on success.
+     - Empty state: "No notes yet." when the list is empty.
+  5. **Nav link:** add a "Notes" link in the nav at the top of `index.astro` alongside the existing "Momentum" link.
+- **done when:** adding a note auto-assigns it to a project when the project name appears in the text; notes mentioning no project land in "Unsorted / New Ideas"; manual reassignment via the dropdown persists on reload; deleting a note removes it; the PATCH route rejects unknown project IDs with 400; `autoTag` unit tests cover: exact name match, id match, no match, multi-match picks earliest; text over 2000 chars returns 400; the page renders correctly with zero notes.
+
 ---
 
 ## STAGE 7 — Visual design pass
@@ -115,8 +137,8 @@
 ### 7.1 — Typography, color, and visual polish
 - **status:** todo
 - **track:** full
-- **owns_files:** `src/components/*.astro`, `src/pages/index.astro`, `src/pages/momentum.astro`, `tailwind.config.cjs` (extend theme), `src/layouts/` (add a base layout if not present)
-- **blocked_by:** 6.4
+- **owns_files:** `src/components/*.astro`, `src/pages/index.astro`, `src/pages/momentum.astro`, `src/pages/notes.astro`, `tailwind.config.cjs` (extend theme), `src/layouts/` (add a base layout if not present)
+- **blocked_by:** 6.5
 - **blocks:** nothing
 - **task:** A focused design pass to make the dashboard feel considered and personal without breaking its minimal, scannable character. No new features — UI only. Specific requirements:
   - **Typography:** Add a single Google Font via `<link>` in a base layout (or per-page `<head>`). Use `Inter` for body text and `Cal Sans` or `Plus Jakarta Sans` for headings/project names — or a comparable pairing that reads clean at small sizes. Extend `tailwind.config.cjs` with `fontFamily` so Tailwind utilities pick up the font. Apply consistently across all pages.
@@ -133,7 +155,7 @@
 
 ## Order of execution (top to bottom, no skipping)
 ```
-5.1 → 5.2 → 6.1 → 6.2 → 6.3 → 6.4 → 7.1
+5.1 → 5.2 → 6.1 → 6.2 → 6.3 → 6.4 → 6.5 → 7.1
 ```
 
 (Stages 0–4 are complete — see progress.md.) Each item must reach QA PASS + clean review before the next starts. The `blocked_by` fields explain the ordering — do not jump ahead.
