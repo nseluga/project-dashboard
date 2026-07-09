@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { readManual, writeManual } from '../../lib/manual.js';
 import { manualMutex } from '../../lib/mutex.js';
-import type { InboxItem } from '../../types/manual.js';
+import type { TokenLogEntry } from '../../types/manual.js';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
@@ -16,34 +16,49 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 
-  const { text, project } = body as Record<string, unknown>;
-
-  if (typeof text !== 'string' || text.trim() === '') {
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
     return new Response(
-      JSON.stringify({ ok: false, error: 'missing required field: text' }),
+      JSON.stringify({ ok: false, error: 'body must be a JSON object' }),
       { status: 400, headers: JSON_HEADERS },
     );
   }
 
-  if (text.length > 500) {
+  const { projectId, tokens, note } = body as Record<string, unknown>;
+
+  if (typeof projectId !== 'string' || projectId.trim() === '') {
     return new Response(
-      JSON.stringify({ ok: false, error: 'text must be 500 characters or fewer' }),
+      JSON.stringify({ ok: false, error: 'missing required field: projectId' }),
       { status: 400, headers: JSON_HEADERS },
     );
   }
 
-  const item: InboxItem = {
+  const tokensNum = Number(tokens);
+  if (!Number.isInteger(tokensNum) || tokensNum <= 0) {
+    return new Response(
+      JSON.stringify({ ok: false, error: 'tokens must be a positive integer' }),
+      { status: 400, headers: JSON_HEADERS },
+    );
+  }
+
+  if (note !== undefined && note !== null && typeof note === 'string' && note.length > 200) {
+    return new Response(
+      JSON.stringify({ ok: false, error: 'note must be 200 characters or fewer' }),
+      { status: 400, headers: JSON_HEADERS },
+    );
+  }
+
+  const entry: TokenLogEntry = {
     id: crypto.randomUUID(),
-    text,
+    projectId,
+    tokens: tokensNum,
+    note: typeof note === 'string' && note.trim() !== '' ? note.trim() : null,
     created: new Date().toISOString(),
-    project: typeof project === 'string' ? project : null,
-    done: false,
   };
 
   try {
     return await manualMutex.runExclusive(async () => {
       const manual = readManual();
-      manual.inbox.push(item);
+      manual.token_log.push(entry);
       writeManual(manual);
       return new Response(JSON.stringify({ ok: true }), { status: 200, headers: JSON_HEADERS });
     });
@@ -66,6 +81,13 @@ export const DELETE: APIRoute = async ({ request }) => {
     );
   }
 
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    return new Response(
+      JSON.stringify({ ok: false, error: 'body must be a JSON object' }),
+      { status: 400, headers: JSON_HEADERS },
+    );
+  }
+
   const { id } = body as Record<string, unknown>;
 
   if (typeof id !== 'string' || id.trim() === '') {
@@ -78,16 +100,16 @@ export const DELETE: APIRoute = async ({ request }) => {
   try {
     return await manualMutex.runExclusive(async () => {
       const manual = readManual();
-      const index = manual.inbox.findIndex((item) => item.id === id);
+      const index = manual.token_log.findIndex((entry) => entry.id === id);
 
       if (index === -1) {
         return new Response(
-          JSON.stringify({ ok: false, error: `inbox item not found: ${id}` }),
+          JSON.stringify({ ok: false, error: `token log entry not found: ${id}` }),
           { status: 404, headers: JSON_HEADERS },
         );
       }
 
-      manual.inbox.splice(index, 1);
+      manual.token_log.splice(index, 1);
       writeManual(manual);
       return new Response(JSON.stringify({ ok: true }), { status: 200, headers: JSON_HEADERS });
     });

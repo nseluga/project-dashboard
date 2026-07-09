@@ -23,7 +23,6 @@ afterEach(() => {
 });
 
 // Import route handlers after snapshot setup — they use the real I/O layer.
-const { POST: inboxPOST, DELETE: inboxDELETE } = await import('../src/pages/api/inbox.js');
 const { POST: dueDatePOST } = await import('../src/pages/api/due-date.js');
 const { POST: overridePOST } = await import('../src/pages/api/override.js');
 
@@ -34,85 +33,12 @@ function makeContext(body: unknown, method = 'POST') {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     }),
-  } as Parameters<typeof inboxPOST>[0];
+  } as Parameters<typeof dueDatePOST>[0];
 }
 
 function readManualFile() {
   return JSON.parse(readFileSync(MANUAL_PATH, 'utf-8'));
 }
-
-// ---------------------------------------------------------------------------
-// POST /api/inbox — behavioral: appends item to data/manual.json
-// ---------------------------------------------------------------------------
-
-describe('POST /api/inbox [behavioral]', () => {
-  it('returns 200 { ok: true } and writes item to manual.json', async () => {
-    const before = readManualFile();
-    const initialCount = before.inbox.length;
-
-    const ctx = makeContext({ text: 'behavioral-inbox-item', project: 'test-proj' });
-    const res = await inboxPOST(ctx);
-
-    expect(res.status).toBe(200);
-    const json = await res.json();
-    expect(json).toEqual({ ok: true });
-
-    const after = readManualFile();
-    expect(after.inbox).toHaveLength(initialCount + 1);
-    const added = after.inbox.find((i: { text: string }) => i.text === 'behavioral-inbox-item');
-    expect(added).toBeDefined();
-    expect(added.project).toBe('test-proj');
-    expect(added.done).toBe(false);
-    expect(typeof added.id).toBe('string');
-  });
-
-  it('returns 400 on missing text — manual.json unchanged', async () => {
-    const before = readFileSync(MANUAL_PATH, 'utf-8');
-
-    const ctx = makeContext({ project: 'test-proj' });
-    const res = await inboxPOST(ctx);
-
-    expect(res.status).toBe(400);
-    const json = await res.json();
-    expect(json.ok).toBe(false);
-
-    // File must be untouched
-    expect(readFileSync(MANUAL_PATH, 'utf-8')).toBe(before);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// DELETE /api/inbox — behavioral: removes item; 404 on unknown id
-// ---------------------------------------------------------------------------
-
-describe('DELETE /api/inbox [behavioral]', () => {
-  it('returns 200 { ok: true } and removes item from manual.json', async () => {
-    // The fixture already has id="b1" in inbox
-    const ctx = makeContext({ id: 'b1' });
-    const res = await inboxDELETE(ctx);
-
-    expect(res.status).toBe(200);
-    const json = await res.json();
-    expect(json).toEqual({ ok: true });
-
-    const after = readManualFile();
-    expect(after.inbox.find((i: { id: string }) => i.id === 'b1')).toBeUndefined();
-  });
-
-  it('returns 404 with unknown id — manual.json unchanged', async () => {
-    const before = readFileSync(MANUAL_PATH, 'utf-8');
-
-    const ctx = makeContext({ id: 'does-not-exist' });
-    const res = await inboxDELETE(ctx);
-
-    expect(res.status).toBe(404);
-    const json = await res.json();
-    expect(json.ok).toBe(false);
-    expect(typeof json.error).toBe('string');
-
-    expect(readFileSync(MANUAL_PATH, 'utf-8')).toBe(before);
-  });
-});
 
 // ---------------------------------------------------------------------------
 // POST /api/due-date — behavioral: writes due_dates to manual.json

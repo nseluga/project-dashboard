@@ -1,50 +1,11 @@
 ---
-# Fix Report — Item 6.3 Minor (pre-compute priorityScore; NaN staleness test)
+# Fix Report — Item 6.4 (TokenTracker date hoist + DELETE shape-guard tests)
 **Date:** 2026-07-09
-**Findings addressed:** 2 of 2 total: 0 QA failures + 2 review findings (Minor)
+**Findings addressed:** 2 of 2 total: 0 QA failures + 2 review findings (both Minor)
 
 ## Changes Made
-- `src/lib/recommend.ts:86-89` — added `priorityScore: PRIORITY_SCORE[p.priority] ?? 0` to `scored` map; sort comparator now reads `b.priorityScore - a.priorityScore` instead of re-evaluating `PRIORITY_SCORE[b.project.priority]` per comparison — review Minor
-- `tests/recommend.test.ts` — added test: `days_since_active: NaN` yields same score as `days_since_active: 5` (no staleness bonus) — review Minor
-
-## Disputed
-None.
-
-## Deferred
-None.
-
----
-# Fix Report — Item 6.3 (review findings: NaN staleness, localeCompare locale, single today clock)
-**Date:** 2026-07-09
-**Findings addressed:** 3 of 3 total: 0 QA failures + 3 review findings (1 Important, 2 Minor)
-
-## Changes Made
-- `src/lib/recommend.ts:36` — guarded staleness check with `Number.isFinite(p.days_since_active) &&`; NaN no longer silently skips the bonus — review Important
-- `src/lib/recommend.ts:114` — pinned `localeCompare` to `'en'` locale for deterministic alphabetical tie-breaking — review Minor
-- `src/pages/index.astro:47-48` — derive `todayStr` once in frontmatter; pass to `getRecommendation` and `<NextUp today={todayStr} />` so scoring and tags share one clock read — review Minor
-- `src/components/NextUp.astro:4-8` — added `today: string` to Props; removed inner `new Date()` call; `buildReasonTags` now accepts `today` as second argument — review Minor
-- `src/components/NextUp.astro:38` — applied same `Number.isFinite` guard to staleness tag in `buildReasonTags` — review Important (parallel to scoring fix)
-
-## Disputed
-None.
-
-## Deferred
-None.
-
----
-# Fix Report — Item 6.2 (review findings: async git calls, warn on error, hoist Set)
-**Date:** 2026-07-09
-**Findings addressed:** 6 of 6: 0 QA failures + 6 review findings (3 Important, 3 Minor)
-
-## Changes Made
-- `src/lib/git.ts:34` — bare `catch {}` replaced with `catch (err)` + `console.warn('[git] getCommitDates failed:', expanded, err)` — review Important (Reliability / Log with Context)
-- `src/lib/git.ts:7-11` — added JSDoc documenting that only `~` and `~/…` are supported; `~username/foo` passes through unchanged — review Minor (Reliability / Fail Fast)
-- `src/lib/git.ts` — added `getCommitDatesAsync` using promisified `execFile`; same warn-on-error pattern — review Important (Scalability / Defer Expensive Work)
-- `src/pages/momentum.astro:35-42` — replaced synchronous `.map()` + `getCommitDates` with `await Promise.all(…map(async …))` + `getCommitDatesAsync`; SSR event loop no longer blocked — review Important (Scalability / Defer Expensive Work)
-- `src/pages/momentum.astro:41` — `project.days_since_active > STALE_THRESHOLD_DAYS` changed to `(project.days_since_active ?? Infinity) > STALE_THRESHOLD_DAYS` — review Minor (Reliability / Don't Assume Success)
-- `src/components/MomentumView.astro:82` — `buildActiveDaySet` hoisted out of per-row render loop into pre-computed `Map<string, Set<string>>` in frontmatter; loop now does `.get()` lookup — review Important (Efficiency / Hoist Invariants)
-- `tests/git.test.ts:71-105` — added `vi.spyOn(console, 'warn')` spy in all three throw-path tests; asserts path + error are logged — review Minor (Reliability / Log with Context)
-- `tests/git.test.ts` mock — added `execFile: vi.fn()` to `child_process` mock so `promisify(execFile)` in git.ts doesn't throw at import time
+- `src/components/TokenTracker.astro:17` — hoisted `new Date()` to frontmatter as `const todayStr`; `formatDate` now accepts `todayStr` as second param; call site updated to `formatDate(entry.created, todayStr)` — review Minor
+- `tests/api.test.ts` — added two DELETE `/api/token-log` shape-guard tests: `null body → 400` and `array body → 400`, mirroring existing POST shape-guard tests at lines 469 and 484 — review Minor
 
 ## Disputed
 none
@@ -53,97 +14,19 @@ none
 none
 
 ---
-# Fix Report — Item 5.2 Minor (explicit field construction in readManual)
+# Fix Report — Item 6.2 (git.ts async Minor findings)
 **Date:** 2026-07-09
-**Findings addressed:** 1 of 1 total: 0 QA failures + 1 review finding (Minor)
+**Findings addressed:** 2 of 2 total: 0 QA failures + 2 review findings (both Minor)
 
 ## Changes Made
-- `src/lib/manual.ts:27-36` — replaced `{ ...EMPTY_MANUAL, ...parsed, overrides:…, … }` with explicit field-by-field construction; unknown top-level keys in `manual.json` can no longer pass through into `writeManual` — review Minor
+- `src/lib/git.ts:65` — changed warn prefix from `[git] getCommitDates failed:` to `[git] getCommitDatesAsync failed:` to distinguish async failures from sync in logs — review Minor
+- `tests/git.test.ts:167-191` — updated two existing async error-path expectations to match renamed prefix; added ENOENT error-path test for `getCommitDatesAsync` (mirrors sync suite's ENOENT coverage) — review Minor
 
 ## Disputed
 none
 
 ## Deferred
 none
-
----
-# Fix Report — Item 5.2 (review findings: error elements, no-op guard, deep clone)
-**Date:** 2026-07-09
-**Findings addressed:** 3 of 3 total: 0 QA failures + 3 review findings (1 Important, 2 Minor)
-
-## Changes Made
-- `src/components/EditControls.astro:73` — added `<p data-error="field-visibility-due_date" ...>` inside visible-state due-date fieldset so Hide-button POST failures surface to the user — review Important
-- `src/components/EditControls.astro:146` — added `<p data-error="field-visibility-priority" ...>` inside visible-state priority div so Hide-button POST failures surface to the user — review Important
-- `src/pages/api/field-visibility.ts:47` — added early-return guard: `if (!hidden && !manual.hidden_fields[projectId]) return {ok:true}` skips disk read-modify-write on no-op show — review Minor
-- `src/lib/manual.ts:35` — replaced shallow `{...(parsed.hidden_fields??{})}` with `Object.fromEntries(Object.entries(...).map(([k,v])=>[k,{...v}]))` for proper two-level deep clone — review Minor
-
-## Disputed
-none
-
-## Deferred
-none
-
----
-# Fix Report — Item 5.2 attempt 3 (shared-mutable-constant deep-clone)
-**Date:** 2026-07-09
-**Findings addressed:** 2 of 2: 2 QA bugs
-
-## Changes Made
-- `src/lib/manual.ts:28` — replaced shallow `{ ...EMPTY_MANUAL, ...JSON.parse(raw) }` with explicit per-field deep-clone spreads: `overrides: { ...(parsed.overrides ?? {}) }`, `due_dates: { ...(parsed.due_dates ?? {}) }`, `inbox: [...(parsed.inbox ?? [])]`, `hidden_fields: { ...(parsed.hidden_fields ?? {}) }`; callers now always receive fresh copies, EMPTY_MANUAL can no longer be poisoned — QA bug Critical
-- `src/lib/manual.ts:28` — same change self-heals `field-visibility-behavioral.test.ts` "bleed" test (`hidden_fields for one project do not bleed`) which failed solely because production code mutated shared constant — QA bug
-
-## Disputed
-None.
-
-## Deferred
-None.
-
----
-# Fix Report — Item 5.2 attempt 2 (readManual normalization)
-**Date:** 2026-07-09
-**Findings addressed:** 1 of 1: 1 QA bug (root cause; resolves 6 of 9 original behavioral failures; 3 remaining are test-isolation issues in QA test file)
-
-## Changes Made
-- `src/lib/manual.ts:28` — changed `return JSON.parse(raw) as ManualData` to `return { ...EMPTY_MANUAL, ...JSON.parse(raw) } as ManualData`; forward-fills all ManualData keys when on-disk JSON is missing them (prevents TypeError on `undefined.hidden_fields`) — QA bug Critical
-- `tests/manual.test.ts:46` — updated "returns parsed data" assertion to `expect({ ...data, hidden_fields: {} })` to reflect new normalization — QA bug (test update)
-- `tests/manual.test.ts:61` — added `hidden_fields: {}` to round-trip fixture to match ManualData shape — QA bug (test update)
-
-## Disputed
-None.
-
-## Deferred
-- 3 of 23 behavioral tests in `field-visibility-behavioral.test.ts` still fail when run together but pass individually: `empty project entry is cleaned up`, `getMergedProjects reflects due_date hidden`, `hidden_fields for one project do not bleed`. Root cause: vitest module cache on `await import('../src/lib/merge.js')` inside test body persists `getMergedProjects` across tests in same suite. This is a test design issue in the QA file, not a code bug — production code is correct.
-
----
-# Fix Report — Item 5.1 (Minor: Safari disclosure triangle)
-**Date:** 2026-07-09
-**Findings addressed:** 1 of 1 total: 0 QA failures + 1 review finding
-
-## Changes Made
-- `src/styles/global.css` — added `summary { list-style: none }` and `summary::-webkit-details-marker { display: none }` to suppress the disclosure triangle in Safari for all `<summary>` elements (covers ProjectCard Edit and completed-section summaries) — review Minor
-
-## Disputed
-None.
-
-## Deferred
-None.
-
----
-# Fix Report — Item 5.1 (collapsible edit controls test selectors)
-**Date:** 2026-07-09
-**Findings addressed:** 3 of 3 QA failures (3 QA bugs + 0 review findings)
-
-## Changes Made
-- `tests/board.test.ts` — added `extractCompletedDetailsBlock()` helper; walks HTML character-by-character tracking `<details>` nesting depth to extract the outer completed-section block without being truncated by nested card Edit `<details>` — QA bug (root cause fix shared by 2 tests)
-- `tests/board.test.ts:647-653` — replaced first-match `/<details[^>]*>([\s\S]*?)<\/details>/` with `extractCompletedDetailsBlock()` to assert "NBA Shot Value" in correct block — QA bug
-- `tests/board.test.ts:655-664` — replaced same first-match regex with `extractCompletedDetailsBlock()` for `<article>`/`grid-cols-1` assertions — QA bug
-- `tests/board.test.ts:702-708` — replaced first-match `/<summary[^>]*>/` with `matchAll` + `.find(/Completed/)` to skip card "Edit" summaries and target completed-section summary — QA bug
-
-## Disputed
-None.
-
-## Deferred
-- `board.test.ts:394` "active section contains os and Patio (2 projects)" — pre-existing failure; live data has 3 active projects; out of scope for this fix.
 
 ---
 # Fix Report — Item 3.2 (Inbox.astro review findings)
@@ -218,22 +101,6 @@ none
 ---
 
 ---
-# Fix Report
-**Date:** 2026-07-07
-**Findings addressed:** 2 of 2 total: 0 QA failures + 2 review findings
-
-## Changes Made
-- `package.json` — moved `gray-matter` from `devDependencies` to `dependencies`; `npm install` updated `package-lock.json` accordingly — review Important (reliability)
-- `tailwind.config.cjs:3` — trimmed content glob from `{astro,ts,tsx}` to `{astro,ts}` — review Minor (least privilege / safety)
-
-## Disputed
-none
-
-## Deferred
-none
----
-
----
 # Fix Report — Item 1.4 (API route handler review findings)
 **Date:** 2026-07-08
 **Findings addressed:** 2 of 3 total: 0 QA failures + 2 review findings (both Important)
@@ -249,8 +116,24 @@ none
 none
 
 ## Deferred
-- `src/pages/api/inbox.ts:63` (O(n) findIndex scan on DELETE) — task explicitly says to accept the linear scan; Minor finding skipped per task spec
+- `src/pages/api/inbox.ts:63` (O(n) findIndex scan on DELETE) — task instructions explicitly say to accept the linear scan; Minor finding skipped per task spec
 
+---
+
+---
+# Fix Report
+**Date:** 2026-07-07
+**Findings addressed:** 2 of 2 total: 0 QA failures + 2 review findings
+
+## Changes Made
+- `package.json` — moved `gray-matter` from `devDependencies` to `dependencies`; `npm install` updated `package-lock.json` accordingly — review Important (reliability)
+- `tailwind.config.cjs:3` — trimmed content glob from `{astro,ts,tsx}` to `{astro,ts}` — review Minor (least privilege / safety)
+
+## Disputed
+none
+
+## Deferred
+none
 ---
 
 ---

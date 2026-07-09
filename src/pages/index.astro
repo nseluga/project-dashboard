@@ -1,15 +1,22 @@
 ---
-import '../styles/global.css';
+import BaseLayout from '../layouts/BaseLayout.astro';
 import { getMergedProjects } from '../lib/merge.js';
+import { readManual } from '../lib/manual.js';
+import { getRecommendation } from '../lib/recommend.js';
 import ProjectCard from '../components/ProjectCard.astro';
 import WeeklyDigest from '../components/WeeklyDigest.astro';
-import Inbox from '../components/Inbox.astro';
+import NextUp from '../components/NextUp.astro';
+import TokenTracker from '../components/TokenTracker.astro';
 import type { MergedProject } from '../types/project.js';
+import type { TokenLogEntry } from '../types/manual.js';
 
 let allProjects: MergedProject[] = [];
+let tokenLog: TokenLogEntry[] = [];
 let loadError = false;
 try {
-  allProjects = await getMergedProjects();
+  const manual = readManual();
+  tokenLog = manual.token_log;
+  allProjects = await getMergedProjects(manual);
 } catch (err) {
   console.error('[dashboard] getMergedProjects() failed:', err);
   loadError = true;
@@ -42,20 +49,22 @@ const sectionLabels: Record<typeof BOARD_STATUSES[number], string> = {
   'in-progress': 'In Progress',
   'on-hold': 'On Hold',
 };
+
+const todayStr = new Date().toISOString().slice(0, 10);
+const recommendation = getRecommendation(allProjects, todayStr);
 ---
 
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Project Dashboard</title>
-  </head>
-  <body class="bg-gray-50 min-h-screen text-gray-900">
+<BaseLayout title="Project Dashboard">
     <div class="max-w-5xl mx-auto px-4 py-8">
       <header class="mb-8">
-        <h1 class="text-2xl font-bold text-gray-900">Project Dashboard</h1>
-        <p class="text-sm text-gray-500 mt-1">What am I working on, where does it stand, and what's due when.</p>
+        <div class="flex items-center justify-between">
+          <h1 class="font-display text-2xl font-bold text-slate-900">Project Dashboard</h1>
+          <nav aria-label="Site navigation" class="flex items-center gap-4">
+            <a href="/momentum" class="text-sm text-slate-500 hover:text-slate-700 transition-colors duration-150">Momentum</a>
+            <a href="/notes" class="text-sm text-slate-500 hover:text-slate-700 transition-colors duration-150">Notes</a>
+          </nav>
+        </div>
+        <p class="text-sm text-slate-500 mt-1">What am I working on, where does it stand, and what's due when.</p>
       </header>
 
       {loadError && (
@@ -64,11 +73,13 @@ const sectionLabels: Record<typeof BOARD_STATUSES[number], string> = {
         </div>
       )}
 
+      <NextUp project={recommendation} today={todayStr} />
+
       <WeeklyDigest projects={allProjects} />
 
-      <hr class="border-t border-gray-200 my-6" />
+      <div class="border-t border-slate-200 my-6" role="separator" aria-hidden="true"></div>
 
-      <main class="flex flex-col gap-10">
+      <main class="flex flex-col gap-10 bg-slate-100 rounded-xl p-6">
         {BOARD_STATUSES.map((status) => {
           const projects = buckets[status];
           return (
@@ -76,17 +87,17 @@ const sectionLabels: Record<typeof BOARD_STATUSES[number], string> = {
               <div class="flex items-center gap-3 mb-4">
                 <h2
                   id={`section-${status}`}
-                  class="text-lg font-semibold text-gray-800"
+                  class="font-display text-lg font-bold text-slate-800"
                 >
                   {sectionLabels[status]}
                 </h2>
-                <span class="text-sm text-gray-500 font-normal">
+                <span class="text-sm text-slate-500 font-normal">
                   ({projects.length})
                 </span>
               </div>
 
               {projects.length === 0 ? (
-                <p class="text-sm text-gray-400 italic">No projects.</p>
+                <p class="text-sm text-slate-400 italic">No projects.</p>
               ) : (
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {projects.map((project) => (
@@ -101,7 +112,7 @@ const sectionLabels: Record<typeof BOARD_STATUSES[number], string> = {
 
       {completedProjects.length > 0 && (
         <details class="mt-10">
-          <summary class="cursor-pointer text-sm font-medium text-gray-500 hover:text-gray-700 select-none">
+          <summary class="cursor-pointer text-sm font-medium text-slate-500 hover:text-slate-700 transition-colors duration-150 select-none">
             Completed ({completedProjects.length})
           </summary>
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 mt-4">
@@ -112,9 +123,7 @@ const sectionLabels: Record<typeof BOARD_STATUSES[number], string> = {
         </details>
       )}
 
-      <hr class="border-t border-gray-200 mt-6" />
+      <TokenTracker projects={allProjects} tokenLog={tokenLog} />
 
-      <Inbox />
     </div>
-  </body>
-</html>
+</BaseLayout>
