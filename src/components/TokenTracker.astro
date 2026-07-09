@@ -107,7 +107,7 @@ const projectNameById = Object.fromEntries(projects.map((p) => [p.id, p.name]));
               <td class="py-2">
                 <button
                   type="button"
-                  class="token-delete-btn text-slate-300 hover:text-red-500 focus:outline-none focus-visible:ring-1 focus-visible:ring-red-400 rounded px-1 transition-colors duration-150"
+                  class="token-delete-btn text-slate-500 hover:text-red-500 focus:outline-none focus-visible:ring-1 focus-visible:ring-red-400 rounded px-1 transition-colors duration-150"
                   data-entry-id={entry.id}
                   aria-label={`Delete token log entry for ${projectNameById[entry.projectId] ?? entry.projectId}`}
                 >
