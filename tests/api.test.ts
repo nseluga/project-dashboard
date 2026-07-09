@@ -586,4 +586,34 @@ describe('DELETE /api/token-log', () => {
 
     expect(res.headers.get('content-type')).toBe('application/json');
   });
+
+  it('returns 400 when body is JSON null (shape guard)', async () => {
+    const ctx = {
+      request: new Request('http://localhost/api/token-log', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(null),
+      }),
+    } as Parameters<typeof tokenLogDELETE>[0];
+    const res = await tokenLogDELETE(ctx);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+  });
+
+  it('returns 400 when body is a JSON array (shape guard)', async () => {
+    const ctx = {
+      request: new Request('http://localhost/api/token-log', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify([{ id: 'entry-1' }]),
+      }),
+    } as Parameters<typeof tokenLogDELETE>[0];
+    const res = await tokenLogDELETE(ctx);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+  });
 });
