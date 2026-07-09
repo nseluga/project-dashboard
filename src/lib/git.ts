@@ -62,7 +62,7 @@ export async function getCommitDatesAsync(repoPath: string, sinceDays: number): 
     );
     return stdout.trim().split('\n').filter(Boolean);
   } catch (err) {
-    console.warn('[git] getCommitDates failed:', expanded, err);
+    console.warn('[git] getCommitDatesAsync failed:', expanded, err);
     return [];
   }
 }

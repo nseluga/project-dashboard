@@ -173,7 +173,7 @@ describe('getCommitDatesAsync()', () => {
       const result = await getCommitDatesAsync('/not/a/repo', 30);
 
       expect(result).toEqual([]);
-      expect(warnSpy).toHaveBeenCalledWith('[git] getCommitDates failed:', '/not/a/repo', err);
+      expect(warnSpy).toHaveBeenCalledWith('[git] getCommitDatesAsync failed:', '/not/a/repo', err);
       warnSpy.mockRestore();
     });
 
@@ -185,7 +185,19 @@ describe('getCommitDatesAsync()', () => {
       const result = await getCommitDatesAsync('/some/repo', 30);
 
       expect(result).toEqual([]);
-      expect(warnSpy).toHaveBeenCalledWith('[git] getCommitDates failed:', '/some/repo', err);
+      expect(warnSpy).toHaveBeenCalledWith('[git] getCommitDatesAsync failed:', '/some/repo', err);
+      warnSpy.mockRestore();
+    });
+
+    it('returns [] and warns when async git call throws ENOENT (no git binary)', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const err = Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+      rejectWith(err);
+
+      const result = await getCommitDatesAsync('/some/repo', 30);
+
+      expect(result).toEqual([]);
+      expect(warnSpy).toHaveBeenCalledWith('[git] getCommitDatesAsync failed:', '/some/repo', err);
       warnSpy.mockRestore();
     });
   });
