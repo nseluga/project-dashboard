@@ -780,6 +780,36 @@ describe('DELETE /api/note', () => {
     const json = await res.json();
     expect(json.ok).toBe(false);
   });
+
+  it('returns 400 when body is JSON null (shape guard)', async () => {
+    const ctx = {
+      request: new Request('http://localhost/api/note', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(null),
+      }),
+    } as Parameters<typeof noteDELETE>[0];
+    const res = await noteDELETE(ctx);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+  });
+
+  it('returns 400 when body is a JSON array (shape guard)', async () => {
+    const ctx = {
+      request: new Request('http://localhost/api/note', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify([{ id: 'note-1' }]),
+      }),
+    } as Parameters<typeof noteDELETE>[0];
+    const res = await noteDELETE(ctx);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -872,6 +902,36 @@ describe('PATCH /api/note', () => {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectId: 'alpha' }),
+      }),
+    } as Parameters<typeof notePATCH>[0];
+    const res = await notePATCH(ctx);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+  });
+
+  it('returns 400 when body is JSON null (shape guard)', async () => {
+    const ctx = {
+      request: new Request('http://localhost/api/note', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(null),
+      }),
+    } as Parameters<typeof notePATCH>[0];
+    const res = await notePATCH(ctx);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+  });
+
+  it('returns 400 when body is a JSON array (shape guard)', async () => {
+    const ctx = {
+      request: new Request('http://localhost/api/note', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify([{ id: 'note-1', projectId: 'alpha' }]),
       }),
     } as Parameters<typeof notePATCH>[0];
     const res = await notePATCH(ctx);
