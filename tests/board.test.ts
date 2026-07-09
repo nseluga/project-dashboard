@@ -590,6 +590,36 @@ describe('Item 2.2: bucket grouping excludes complete and archived projects', ()
   });
 });
 
+// ── Helper: extract the completed-section <details> block (balanced, handles nested <details>) ──
+function extractCompletedDetailsBlock(html: string): string | null {
+  // Find the index of "Completed (" text which appears in the section's <summary>
+  const summaryIdx = html.search(/Completed\s*\(/);
+  if (summaryIdx === -1) return null;
+  // Walk back from that position to find the opening <details> tag
+  const before = html.slice(0, summaryIdx);
+  const openTagIdx = before.lastIndexOf('<details');
+  if (openTagIdx === -1) return null;
+  // Walk forward from openTagIdx, tracking nesting depth to find the balanced </details>
+  let depth = 0;
+  let i = openTagIdx;
+  while (i < html.length) {
+    if (html.startsWith('<details', i)) {
+      // Skip self-closing check — <details> is never self-closing in HTML
+      depth++;
+      i += '<details'.length;
+    } else if (html.startsWith('</details>', i)) {
+      depth--;
+      if (depth === 0) {
+        return html.slice(openTagIdx, i + '</details>'.length);
+      }
+      i += '</details>'.length;
+    } else {
+      i++;
+    }
+  }
+  return null;
+}
+
 // ── Item 2.2: Behavioral — live HTML confirms collapsed section ───────────────
 
 describe('Item 2.2: Behavioral — collapsed completed section in rendered HTML', () => {
@@ -615,19 +645,22 @@ describe('Item 2.2: Behavioral — collapsed completed section in rendered HTML'
   });
 
   it('<details> contains "NBA Shot Value" inside — visible when expanded', () => {
-    const detailsMatch = html.match(/<details[^>]*>([\s\S]*?)<\/details>/);
-    expect(detailsMatch, '<details> block not found').toBeTruthy();
-    expect(detailsMatch![1]).toContain('NBA Shot Value');
+    // Extract the completed-section <details> by finding its opening tag (before "Completed" summary)
+    // and walking the HTML to the balanced </details> so nested card <details> don't truncate it
+    const completedDetailsBlock = extractCompletedDetailsBlock(html);
+    expect(completedDetailsBlock, 'completed-section <details> block not found').toBeTruthy();
+    expect(completedDetailsBlock).toContain('NBA Shot Value');
   });
 
   it('<details> inner content uses ProjectCard <article> layout', () => {
-    const detailsMatch = html.match(/<details[^>]*>([\s\S]*?)<\/details>/);
-    expect(detailsMatch, '<details> block not found').toBeTruthy();
-    const inner = detailsMatch![1];
+    // Extract the completed-section <details> by finding its opening tag (before "Completed" summary)
+    // and walking the HTML to the balanced </details> so nested card <details> don't truncate it
+    const completedDetailsBlock = extractCompletedDetailsBlock(html);
+    expect(completedDetailsBlock, 'completed-section <details> block not found').toBeTruthy();
     // ProjectCard renders an <article> element
-    expect(inner).toContain('<article');
+    expect(completedDetailsBlock).toContain('<article');
     // And a grid wrapper
-    expect(inner).toMatch(/grid-cols-1/);
+    expect(completedDetailsBlock).toMatch(/grid-cols-1/);
   });
 
   it('nba-shot-value does NOT appear in the active section HTML', () => {
@@ -667,8 +700,10 @@ describe('Item 2.2: Behavioral — collapsed completed section in rendered HTML'
   });
 
   it('summary element shows "Completed (1)" with the count', () => {
-    const summaryMatch = html.match(/<summary[^>]*>([\s\S]*?)<\/summary>/);
-    expect(summaryMatch, '<summary> not found').toBeTruthy();
-    expect(summaryMatch![1]).toMatch(/Completed\s*\(\s*1\s*\)/);
+    // Target the completed-section <summary> specifically — "Edit" summaries will not match
+    const allSummaries = [...html.matchAll(/<summary[^>]*>([\s\S]*?)<\/summary>/g)];
+    const completedSummary = allSummaries.find((m) => /Completed/i.test(m[1]));
+    expect(completedSummary, 'completed-section <summary> not found').toBeTruthy();
+    expect(completedSummary![1]).toMatch(/Completed\s*\(\s*1\s*\)/);
   });
 });
