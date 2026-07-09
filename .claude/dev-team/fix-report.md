@@ -1,4 +1,72 @@
 ---
+# Fix Report — Item 6.3 Minor (pre-compute priorityScore; NaN staleness test)
+**Date:** 2026-07-09
+**Findings addressed:** 2 of 2 total: 0 QA failures + 2 review findings (Minor)
+
+## Changes Made
+- `src/lib/recommend.ts:86-89` — added `priorityScore: PRIORITY_SCORE[p.priority] ?? 0` to `scored` map; sort comparator now reads `b.priorityScore - a.priorityScore` instead of re-evaluating `PRIORITY_SCORE[b.project.priority]` per comparison — review Minor
+- `tests/recommend.test.ts` — added test: `days_since_active: NaN` yields same score as `days_since_active: 5` (no staleness bonus) — review Minor
+
+## Disputed
+None.
+
+## Deferred
+None.
+
+---
+# Fix Report — Item 6.3 (review findings: NaN staleness, localeCompare locale, single today clock)
+**Date:** 2026-07-09
+**Findings addressed:** 3 of 3 total: 0 QA failures + 3 review findings (1 Important, 2 Minor)
+
+## Changes Made
+- `src/lib/recommend.ts:36` — guarded staleness check with `Number.isFinite(p.days_since_active) &&`; NaN no longer silently skips the bonus — review Important
+- `src/lib/recommend.ts:114` — pinned `localeCompare` to `'en'` locale for deterministic alphabetical tie-breaking — review Minor
+- `src/pages/index.astro:47-48` — derive `todayStr` once in frontmatter; pass to `getRecommendation` and `<NextUp today={todayStr} />` so scoring and tags share one clock read — review Minor
+- `src/components/NextUp.astro:4-8` — added `today: string` to Props; removed inner `new Date()` call; `buildReasonTags` now accepts `today` as second argument — review Minor
+- `src/components/NextUp.astro:38` — applied same `Number.isFinite` guard to staleness tag in `buildReasonTags` — review Important (parallel to scoring fix)
+
+## Disputed
+None.
+
+## Deferred
+None.
+
+---
+# Fix Report — Item 6.2 (review findings: async git calls, warn on error, hoist Set)
+**Date:** 2026-07-09
+**Findings addressed:** 6 of 6: 0 QA failures + 6 review findings (3 Important, 3 Minor)
+
+## Changes Made
+- `src/lib/git.ts:34` — bare `catch {}` replaced with `catch (err)` + `console.warn('[git] getCommitDates failed:', expanded, err)` — review Important (Reliability / Log with Context)
+- `src/lib/git.ts:7-11` — added JSDoc documenting that only `~` and `~/…` are supported; `~username/foo` passes through unchanged — review Minor (Reliability / Fail Fast)
+- `src/lib/git.ts` — added `getCommitDatesAsync` using promisified `execFile`; same warn-on-error pattern — review Important (Scalability / Defer Expensive Work)
+- `src/pages/momentum.astro:35-42` — replaced synchronous `.map()` + `getCommitDates` with `await Promise.all(…map(async …))` + `getCommitDatesAsync`; SSR event loop no longer blocked — review Important (Scalability / Defer Expensive Work)
+- `src/pages/momentum.astro:41` — `project.days_since_active > STALE_THRESHOLD_DAYS` changed to `(project.days_since_active ?? Infinity) > STALE_THRESHOLD_DAYS` — review Minor (Reliability / Don't Assume Success)
+- `src/components/MomentumView.astro:82` — `buildActiveDaySet` hoisted out of per-row render loop into pre-computed `Map<string, Set<string>>` in frontmatter; loop now does `.get()` lookup — review Important (Efficiency / Hoist Invariants)
+- `tests/git.test.ts:71-105` — added `vi.spyOn(console, 'warn')` spy in all three throw-path tests; asserts path + error are logged — review Minor (Reliability / Log with Context)
+- `tests/git.test.ts` mock — added `execFile: vi.fn()` to `child_process` mock so `promisify(execFile)` in git.ts doesn't throw at import time
+
+## Disputed
+none
+
+## Deferred
+none
+
+---
+# Fix Report — Item 5.2 Minor (explicit field construction in readManual)
+**Date:** 2026-07-09
+**Findings addressed:** 1 of 1 total: 0 QA failures + 1 review finding (Minor)
+
+## Changes Made
+- `src/lib/manual.ts:27-36` — replaced `{ ...EMPTY_MANUAL, ...parsed, overrides:…, … }` with explicit field-by-field construction; unknown top-level keys in `manual.json` can no longer pass through into `writeManual` — review Minor
+
+## Disputed
+none
+
+## Deferred
+none
+
+---
 # Fix Report — Item 5.2 (review findings: error elements, no-op guard, deep clone)
 **Date:** 2026-07-09
 **Findings addressed:** 3 of 3 total: 0 QA failures + 3 review findings (1 Important, 2 Minor)
