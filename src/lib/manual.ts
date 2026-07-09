@@ -25,7 +25,15 @@ export function readManual(): ManualData {
   }
 
   try {
-    return { ...EMPTY_MANUAL, ...JSON.parse(raw) } as ManualData;
+    const parsed = JSON.parse(raw);
+    return {
+      ...EMPTY_MANUAL,
+      ...parsed,
+      overrides: { ...(parsed.overrides ?? {}) },
+      due_dates: { ...(parsed.due_dates ?? {}) },
+      inbox: [...(parsed.inbox ?? [])],
+      hidden_fields: { ...(parsed.hidden_fields ?? {}) },
+    } as ManualData;
   } catch (e) {
     throw new Error(`[manual] failed to parse ${filePath}: ${(e as Error).message}`);
   }
