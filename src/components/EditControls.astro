@@ -63,12 +63,7 @@ const currentPriority = project.priority ?? '__reset__';
 
   <!-- Status override control -->
   <div class="flex flex-col gap-1.5">
-    <label
-      for={`status-${project.id}`}
-      class="text-xs font-semibold uppercase tracking-wide text-gray-400"
-    >
-      Status override
-    </label>
+    <span class="text-xs font-semibold uppercase tracking-wide text-gray-400">Status override</span>
     <select
       id={`status-${project.id}`}
       name="status"
@@ -90,12 +85,7 @@ const currentPriority = project.priority ?? '__reset__';
 
   <!-- Priority override control -->
   <div class="flex flex-col gap-1.5">
-    <label
-      for={`priority-${project.id}`}
-      class="text-xs font-semibold uppercase tracking-wide text-gray-400"
-    >
-      Priority override
-    </label>
+    <span class="text-xs font-semibold uppercase tracking-wide text-gray-400">Priority override</span>
     <select
       id={`priority-${project.id}`}
       name="priority"

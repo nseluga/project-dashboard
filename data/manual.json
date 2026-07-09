@@ -4,6 +4,9 @@
       "priority": "high"
     },
     "patio": {
+      "priority": "low"
+    },
+    "os": {
       "priority": "medium"
     }
   },

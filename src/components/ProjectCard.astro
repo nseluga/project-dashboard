@@ -38,7 +38,7 @@ const safeGithub =
 <article class={`rounded-lg p-4 shadow-sm flex flex-col gap-3 ${cardBorder}`}>
   <!-- Header row: name + badges -->
   <div class="flex flex-wrap items-center gap-2">
-    <h3 class="text-base font-semibold text-gray-900 mr-1">{project.name}</h3>
+    <h3 class="text-base font-semibold text-gray-900 mr-1" aria-label={project.name}>{project.name}</h3>
     <span class={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusClass}`}>
       {project.status}
     </span>
