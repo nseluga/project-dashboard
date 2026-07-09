@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Mock child_process before importing git.ts
 vi.mock('child_process', () => ({
   execFileSync: vi.fn(),
+  execFile: vi.fn(),
 }));
 
 const { execFileSync } = await import('child_process');
@@ -68,7 +69,8 @@ describe('getCommitDates()', () => {
   });
 
   describe('error paths', () => {
-    it('returns [] when execFileSync throws (git error / not a repo)', () => {
+    it('returns [] and warns when execFileSync throws (git error / not a repo)', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       mockExecFileSync.mockImplementation(() => {
         throw new Error('fatal: not a git repository');
       });
@@ -76,6 +78,12 @@ describe('getCommitDates()', () => {
       const result = getCommitDates('/not/a/repo', 30);
 
       expect(result).toEqual([]);
+      expect(warnSpy).toHaveBeenCalledWith(
+        '[git] getCommitDates failed:',
+        '/not/a/repo',
+        expect.any(Error),
+      );
+      warnSpy.mockRestore();
     });
 
     it('returns [] when repoPath is empty string', () => {
@@ -85,22 +93,28 @@ describe('getCommitDates()', () => {
       expect(mockExecFileSync).not.toHaveBeenCalled();
     });
 
-    it('returns [] when execFileSync throws ENOENT (no git binary)', () => {
+    it('returns [] and warns when execFileSync throws ENOENT (no git binary)', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const err = Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
       mockExecFileSync.mockImplementation(() => { throw err; });
 
       const result = getCommitDates('/some/repo', 30);
 
       expect(result).toEqual([]);
+      expect(warnSpy).toHaveBeenCalledWith('[git] getCommitDates failed:', '/some/repo', err);
+      warnSpy.mockRestore();
     });
 
-    it('returns [] when git command times out', () => {
+    it('returns [] and warns when git command times out', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const err = Object.assign(new Error('spawnSync git ETIMEDOUT'), { code: 'ETIMEDOUT' });
       mockExecFileSync.mockImplementation(() => { throw err; });
 
       const result = getCommitDates('/some/repo', 30);
 
       expect(result).toEqual([]);
+      expect(warnSpy).toHaveBeenCalledWith('[git] getCommitDates failed:', '/some/repo', err);
+      warnSpy.mockRestore();
     });
   });
 });

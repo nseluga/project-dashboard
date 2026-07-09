@@ -1,7 +1,7 @@
 ---
 import '../styles/global.css';
 import { getMergedProjects } from '../lib/merge.js';
-import { getCommitDates } from '../lib/git.js';
+import { getCommitDatesAsync } from '../lib/git.js';
 import MomentumView from '../components/MomentumView.astro';
 import type { MergedProject } from '../types/project.js';
 
@@ -32,15 +32,17 @@ interface MomentumEntry {
   stalled: boolean;
 }
 
-const momentumData: MomentumEntry[] = allProjects.map((project) => {
-  const commitDates = project.repo ? getCommitDates(project.repo, sinceDays) : [];
-  return {
-    project,
-    commitDates,
-    commitCount: commitDates.length,
-    stalled: project.days_since_active > STALE_THRESHOLD_DAYS,
-  };
-});
+const momentumData: MomentumEntry[] = await Promise.all(
+  allProjects.map(async (project) => {
+    const commitDates = project.repo ? await getCommitDatesAsync(project.repo, sinceDays) : [];
+    return {
+      project,
+      commitDates,
+      commitCount: commitDates.length,
+      stalled: (project.days_since_active ?? Infinity) > STALE_THRESHOLD_DAYS,
+    };
+  }),
+);
 ---
 
 <!DOCTYPE html>

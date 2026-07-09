@@ -47,6 +47,15 @@ function buildDayWindow(sinceDays: number): string[] {
 }
 
 const dayWindow = buildDayWindow(sinceDays);
+
+// Pre-compute active day sets for all projects so buildActiveDaySet is not
+// called inside the per-row render loop on every render.
+const activeDaySets = new Map<string, Set<string>>(
+  momentumData.map(({ project, commitDates }) => [
+    project.name,
+    buildActiveDaySet(commitDates),
+  ]),
+);
 ---
 
 <div>
@@ -78,8 +87,8 @@ const dayWindow = buildDayWindow(sinceDays);
 
   <!-- Project rows -->
   <div class="flex flex-col divide-y divide-gray-100">
-    {momentumData.map(({ project, commitDates, commitCount, stalled }) => {
-      const activeDays = buildActiveDaySet(commitDates);
+    {momentumData.map(({ project, commitCount, stalled }) => {
+      const activeDays = activeDaySets.get(project.name) ?? new Set<string>();
       const badgeClass = stalled
         ? 'bg-amber-100 text-amber-700'
         : 'bg-green-100 text-green-700';
