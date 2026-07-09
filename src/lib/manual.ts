@@ -24,19 +24,19 @@ export function readManual(): ManualData {
     throw new Error(`[manual] failed to read ${filePath}: ${(e as Error).message}`);
   }
 
+  let parsed: Partial<ManualData>;
   try {
-    const parsed = JSON.parse(raw);
-    return {
-      ...EMPTY_MANUAL,
-      ...parsed,
-      overrides: { ...(parsed.overrides ?? {}) },
-      due_dates: { ...(parsed.due_dates ?? {}) },
-      inbox: [...(parsed.inbox ?? [])],
-      hidden_fields: Object.fromEntries(Object.entries(parsed.hidden_fields ?? {}).map(([k, v]) => [k, { ...v }])),
-    } as ManualData;
+    parsed = JSON.parse(raw) as Partial<ManualData>;
   } catch (e) {
     throw new Error(`[manual] failed to parse ${filePath}: ${(e as Error).message}`);
   }
+
+  return {
+    overrides: { ...(parsed.overrides ?? {}) },
+    due_dates: { ...(parsed.due_dates ?? {}) },
+    inbox: [...(parsed.inbox ?? [])],
+    hidden_fields: Object.fromEntries(Object.entries(parsed.hidden_fields ?? {}).map(([k, v]) => [k, { ...v }])),
+  };
 }
 
 export function writeManual(data: ManualData): void {
