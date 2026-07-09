@@ -142,19 +142,23 @@ describe('Item 5.2 Behavioral: hiding priority persists in manual.json', () => {
   });
 
   it('empty project entry is cleaned up when last hidden field is restored', async () => {
-    // Hide only one field for a project
-    const hideCtx = makeContext({ projectId: 'os', field: 'priority', hidden: true });
+    // Use a project id that is guaranteed to have no prior hidden_fields entry
+    // regardless of what data/manual.json contains at test-time.
+    const testProjectId = '__cleanup_test_project__';
+
+    // Hide the only field we will touch
+    const hideCtx = makeContext({ projectId: testProjectId, field: 'priority', hidden: true });
     await fieldVisibilityPOST(hideCtx);
 
     const afterHide = readManualFile();
-    expect('os' in (afterHide.hidden_fields ?? {})).toBe(true);
+    expect(testProjectId in (afterHide.hidden_fields ?? {})).toBe(true);
 
-    // Restore it
-    const showCtx = makeContext({ projectId: 'os', field: 'priority', hidden: false });
+    // Restore it — should remove the project entry entirely
+    const showCtx = makeContext({ projectId: testProjectId, field: 'priority', hidden: false });
     await fieldVisibilityPOST(showCtx);
 
     const afterShow = readManualFile();
-    expect('os' in (afterShow.hidden_fields ?? {})).toBe(false);
+    expect(testProjectId in (afterShow.hidden_fields ?? {})).toBe(false);
   });
 });
 
