@@ -1,5 +1,5 @@
 ---
-import '../styles/global.css';
+import BaseLayout from '../layouts/BaseLayout.astro';
 import { getMergedProjects } from '../lib/merge.js';
 import { getCommitDatesAsync } from '../lib/git.js';
 import MomentumView from '../components/MomentumView.astro';
@@ -45,17 +45,7 @@ const momentumData: MomentumEntry[] = await Promise.all(
 );
 ---
 
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Momentum — Project Dashboard</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700&display=swap" rel="stylesheet" />
-  </head>
-  <body class="font-sans bg-slate-50 min-h-screen text-slate-900">
+<BaseLayout title="Momentum — Project Dashboard">
     <div class="max-w-5xl mx-auto px-4 py-8">
       <header class="mb-8">
         <div class="flex items-center gap-4 mb-1">
@@ -82,5 +72,4 @@ const momentumData: MomentumEntry[] = await Promise.all(
         sinceDays={sinceDays}
       />
     </div>
-  </body>
-</html>
+</BaseLayout>

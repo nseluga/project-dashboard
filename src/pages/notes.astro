@@ -1,5 +1,5 @@
 ---
-import '../styles/global.css';
+import BaseLayout from '../layouts/BaseLayout.astro';
 import { readManual } from '../lib/manual.js';
 import { getMergedProjects } from '../lib/merge.js';
 import type { MergedProject } from '../types/project.js';
@@ -47,17 +47,7 @@ function daysAgoLabel(created: string): string {
 }
 ---
 
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Notes — Project Dashboard</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700&display=swap" rel="stylesheet" />
-  </head>
-  <body class="font-sans bg-slate-50 min-h-screen text-slate-900">
+<BaseLayout title="Notes — Project Dashboard">
     <div class="max-w-3xl mx-auto px-4 py-8">
       <header class="mb-8">
         <div class="flex items-center justify-between">
@@ -330,5 +320,4 @@ function daysAgoLabel(created: string): string {
         });
       });
     </script>
-  </body>
-</html>
+</BaseLayout>
