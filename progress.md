@@ -27,7 +27,7 @@
 | 3 | 3.1 — Weekly digest section | done full — computeDigestBuckets() with lower-bound guard and date validation, 19-test suite (5a4c800) |
 | 3 | 3.2 — Quick-capture inbox UI | done full — Inbox.astro with try/catch error boundary, AbortController fetch timeout, 500-char text cap, aria-describedby, 206-test suite (10db84a) |
 | 4 | 4.1 — Tailwind styling pass | done light — status/priority badge colors, overdue red border, section separators, bg-slate-50 on digest+inbox, 206-test suite (6bfba44) |
-| 4 | 4.2 — `README.md`: how to run | not started |
+| 4 | 4.2 — `README.md`: how to run | done trivial — setup/run instructions, data/manual.json note, stack section (e90d94b) |
 
 ## How to update this file
 

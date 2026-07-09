@@ -180,7 +180,7 @@
 - **done when:** all status badges are correctly color-coded; overdue cards have a clear red treatment; priority badges are visible; spacing is consistent; the page looks polished and consistent with `~/portfolio/STANDARDS.md` examples.
 
 ### 4.2 — `README.md`: how to run
-- **status:** not started
+- **status:** done
 - **track:** trivial
 - **owns_files:** `README.md`
 - **blocked_by:** 4.1
