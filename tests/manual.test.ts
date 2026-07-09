@@ -92,6 +92,7 @@ describe('writeManual()', () => {
       overrides: { 'os': { status: 'active' } },
       due_dates: {},
       inbox: [{ id: 'z1', text: 'Check logs', created: '2026-07-08', project: 'os', done: false }],
+      hidden_fields: {},
     };
 
     writeManual(newData);

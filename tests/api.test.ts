@@ -7,7 +7,6 @@ vi.mock('../src/lib/manual.js', () => ({
   writeManual: vi.fn(),
 }));
 
-const { POST: inboxPOST, DELETE: inboxDELETE } = await import('../src/pages/api/inbox.js');
 const { POST: dueDatePOST } = await import('../src/pages/api/due-date.js');
 const { POST: overridePOST } = await import('../src/pages/api/override.js');
 const { POST: fieldVisibilityPOST } = await import('../src/pages/api/field-visibility.js');
@@ -17,14 +16,14 @@ const mockReadManual = vi.mocked(readManual);
 const mockWriteManual = vi.mocked(writeManual);
 
 /** Build a minimal Astro APIContext with just the request field set. */
-function makeContext(body: unknown): Parameters<typeof inboxPOST>[0] {
+function makeContext(body: unknown): Parameters<typeof dueDatePOST>[0] {
   return {
     request: new Request('http://localhost/api/test', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     }),
-  } as Parameters<typeof inboxPOST>[0];
+  } as Parameters<typeof dueDatePOST>[0];
 }
 
 function makeManual(overrides: Partial<ManualData> = {}): ManualData {
@@ -40,144 +39,6 @@ function makeManual(overrides: Partial<ManualData> = {}): ManualData {
 beforeEach(() => {
   vi.clearAllMocks();
   mockWriteManual.mockReturnValue(undefined);
-});
-
-// ---------------------------------------------------------------------------
-// POST /api/inbox
-// ---------------------------------------------------------------------------
-
-describe('POST /api/inbox', () => {
-  it('returns 200 { ok: true } on valid input and appends item', async () => {
-    const manual = makeManual();
-    mockReadManual.mockReturnValue(manual);
-
-    const ctx = makeContext({ text: 'review PR', project: 'my-project' });
-    const res = await inboxPOST(ctx);
-
-    expect(res.status).toBe(200);
-    const json = await res.json();
-    expect(json).toEqual({ ok: true });
-
-    expect(mockWriteManual).toHaveBeenCalledOnce();
-    const written: ManualData = mockWriteManual.mock.calls[0][0];
-    expect(written.inbox).toHaveLength(1);
-    expect(written.inbox[0].text).toBe('review PR');
-    expect(written.inbox[0].project).toBe('my-project');
-    expect(written.inbox[0].done).toBe(false);
-    expect(typeof written.inbox[0].id).toBe('string');
-    expect(typeof written.inbox[0].created).toBe('string');
-  });
-
-  it('sets project to null when not provided', async () => {
-    const manual = makeManual();
-    mockReadManual.mockReturnValue(manual);
-
-    const ctx = makeContext({ text: 'standalone task' });
-    await inboxPOST(ctx);
-
-    const written: ManualData = mockWriteManual.mock.calls[0][0];
-    expect(written.inbox[0].project).toBeNull();
-  });
-
-  it('sets project to null when explicitly null', async () => {
-    const manual = makeManual();
-    mockReadManual.mockReturnValue(manual);
-
-    const ctx = makeContext({ text: 'standalone task', project: null });
-    await inboxPOST(ctx);
-
-    const written: ManualData = mockWriteManual.mock.calls[0][0];
-    expect(written.inbox[0].project).toBeNull();
-  });
-
-  it('returns 400 when text is missing', async () => {
-    mockReadManual.mockReturnValue(makeManual());
-    const ctx = makeContext({ project: 'my-project' });
-    const res = await inboxPOST(ctx);
-
-    expect(res.status).toBe(400);
-    const json = await res.json();
-    expect(json.ok).toBe(false);
-    expect(typeof json.error).toBe('string');
-  });
-
-  it('returns 400 when text is empty string', async () => {
-    mockReadManual.mockReturnValue(makeManual());
-    const ctx = makeContext({ text: '' });
-    const res = await inboxPOST(ctx);
-
-    expect(res.status).toBe(400);
-    const json = await res.json();
-    expect(json.ok).toBe(false);
-  });
-
-  it('returns Content-Type: application/json', async () => {
-    mockReadManual.mockReturnValue(makeManual());
-    const ctx = makeContext({ text: 'hello' });
-    const res = await inboxPOST(ctx);
-
-    expect(res.headers.get('content-type')).toBe('application/json');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// DELETE /api/inbox
-// ---------------------------------------------------------------------------
-
-describe('DELETE /api/inbox', () => {
-  it('returns 200 { ok: true } and removes the item when id is found', async () => {
-    const manual = makeManual({
-      inbox: [
-        { id: 'item-1', text: 'first', created: '2026-07-08T00:00:00.000Z', project: null, done: false },
-        { id: 'item-2', text: 'second', created: '2026-07-08T00:00:00.000Z', project: null, done: false },
-      ],
-    });
-    mockReadManual.mockReturnValue(manual);
-
-    const ctx = makeContext({ id: 'item-1' });
-    const res = await inboxDELETE(ctx);
-
-    expect(res.status).toBe(200);
-    const json = await res.json();
-    expect(json).toEqual({ ok: true });
-
-    const written: ManualData = mockWriteManual.mock.calls[0][0];
-    expect(written.inbox).toHaveLength(1);
-    expect(written.inbox[0].id).toBe('item-2');
-  });
-
-  it('returns 404 when id is not found', async () => {
-    mockReadManual.mockReturnValue(makeManual({ inbox: [] }));
-
-    const ctx = makeContext({ id: 'does-not-exist' });
-    const res = await inboxDELETE(ctx);
-
-    expect(res.status).toBe(404);
-    const json = await res.json();
-    expect(json.ok).toBe(false);
-    expect(typeof json.error).toBe('string');
-    expect(mockWriteManual).not.toHaveBeenCalled();
-  });
-
-  it('returns 400 when id is missing', async () => {
-    mockReadManual.mockReturnValue(makeManual());
-    const ctx = makeContext({});
-    const res = await inboxDELETE(ctx);
-
-    expect(res.status).toBe(400);
-    const json = await res.json();
-    expect(json.ok).toBe(false);
-  });
-
-  it('returns Content-Type: application/json', async () => {
-    mockReadManual.mockReturnValue(makeManual({
-      inbox: [{ id: 'x', text: 'hi', created: '2026-07-08T00:00:00.000Z', project: null, done: false }],
-    }));
-    const ctx = makeContext({ id: 'x' });
-    const res = await inboxDELETE(ctx);
-
-    expect(res.headers.get('content-type')).toBe('application/json');
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -257,29 +118,6 @@ describe('mutex.ts exports manualMutex', () => {
 // ---------------------------------------------------------------------------
 
 describe('I/O errors return 500 { ok: false, error }', () => {
-  it('POST /api/inbox returns 500 when readManual throws', async () => {
-    mockReadManual.mockImplementation(() => { throw new Error('disk read failure'); });
-    const ctx = makeContext({ text: 'hello' });
-    const res = await inboxPOST(ctx);
-
-    expect(res.status).toBe(500);
-    const json = await res.json();
-    expect(json.ok).toBe(false);
-    expect(typeof json.error).toBe('string');
-    expect(json.error).toContain('disk read failure');
-  });
-
-  it('DELETE /api/inbox returns 500 when readManual throws', async () => {
-    mockReadManual.mockImplementation(() => { throw new Error('disk read failure'); });
-    const ctx = makeContext({ id: 'some-id' });
-    const res = await inboxDELETE(ctx);
-
-    expect(res.status).toBe(500);
-    const json = await res.json();
-    expect(json.ok).toBe(false);
-    expect(typeof json.error).toBe('string');
-  });
-
   it('POST /api/due-date returns 500 when readManual throws', async () => {
     mockReadManual.mockImplementation(() => { throw new Error('disk read failure'); });
     const ctx = makeContext({ projectId: 'alpha', date: '2026-09-01' });
@@ -302,17 +140,6 @@ describe('I/O errors return 500 { ok: false, error }', () => {
     expect(typeof json.error).toBe('string');
   });
 
-  it('POST /api/inbox returns 500 when writeManual throws', async () => {
-    mockReadManual.mockReturnValue(makeManual());
-    mockWriteManual.mockImplementation(() => { throw new Error('disk write failure'); });
-    const ctx = makeContext({ text: 'hello' });
-    const res = await inboxPOST(ctx);
-
-    expect(res.status).toBe(500);
-    const json = await res.json();
-    expect(json.ok).toBe(false);
-    expect(json.error).toContain('disk write failure');
-  });
 });
 
 // ---------------------------------------------------------------------------

@@ -3,7 +3,6 @@ import '../styles/global.css';
 import { getMergedProjects } from '../lib/merge.js';
 import ProjectCard from '../components/ProjectCard.astro';
 import WeeklyDigest from '../components/WeeklyDigest.astro';
-import Inbox from '../components/Inbox.astro';
 import type { MergedProject } from '../types/project.js';
 
 let allProjects: MergedProject[] = [];
@@ -112,9 +111,6 @@ const sectionLabels: Record<typeof BOARD_STATUSES[number], string> = {
         </details>
       )}
 
-      <hr class="border-t border-gray-200 mt-6" />
-
-      <Inbox />
     </div>
   </body>
 </html>

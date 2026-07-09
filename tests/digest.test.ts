@@ -18,6 +18,7 @@ function makeProject(overrides: Partial<MergedProject> = {}): MergedProject {
     days_since_active: 10,
     due_date: null,
     overdue: false,
+    hidden_fields: { due_date: false, priority: false },
     ...overrides,
   };
 }
