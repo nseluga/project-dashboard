@@ -43,7 +43,8 @@ describe('readManual()', () => {
     fs.writeFileSync(path.join(dataDir, 'manual.json'), JSON.stringify(data), 'utf-8');
 
     const result = readManual();
-    expect(result).toEqual(data);
+    // readManual() normalizes missing keys via EMPTY_MANUAL spread, so hidden_fields is always present
+    expect(result).toEqual({ ...data, hidden_fields: {} });
   });
 
   it('throws a descriptive error on malformed JSON', () => {
@@ -60,6 +61,7 @@ describe('writeManual()', () => {
       inbox: [
         { id: 'x1', text: 'Review model', created: '2026-07-08', project: 'pitcher-injury-risk', done: false },
       ],
+      hidden_fields: {},
     };
 
     writeManual(data);

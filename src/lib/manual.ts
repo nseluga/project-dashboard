@@ -25,7 +25,7 @@ export function readManual(): ManualData {
   }
 
   try {
-    return JSON.parse(raw) as ManualData;
+    return { ...EMPTY_MANUAL, ...JSON.parse(raw) } as ManualData;
   } catch (e) {
     throw new Error(`[manual] failed to parse ${filePath}: ${(e as Error).message}`);
   }
