@@ -16,6 +16,13 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    return new Response(
+      JSON.stringify({ ok: false, error: 'body must be a JSON object' }),
+      { status: 400, headers: JSON_HEADERS },
+    );
+  }
+
   const { projectId, tokens, note } = body as Record<string, unknown>;
 
   if (typeof projectId !== 'string' || projectId.trim() === '') {
@@ -29,6 +36,13 @@ export const POST: APIRoute = async ({ request }) => {
   if (!Number.isInteger(tokensNum) || tokensNum <= 0) {
     return new Response(
       JSON.stringify({ ok: false, error: 'tokens must be a positive integer' }),
+      { status: 400, headers: JSON_HEADERS },
+    );
+  }
+
+  if (note !== undefined && note !== null && typeof note === 'string' && note.length > 200) {
+    return new Response(
+      JSON.stringify({ ok: false, error: 'note must be 200 characters or fewer' }),
       { status: 400, headers: JSON_HEADERS },
     );
   }

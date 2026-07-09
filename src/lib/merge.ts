@@ -11,6 +11,11 @@ export async function getMergedProjects(): Promise<MergedProject[]> {
     'name', 'summary', 'status', 'priority', 'next_step', 'repo', 'github', 'tags',
   ]);
 
+  const tokenTotals = new Map<string, number>();
+  for (const entry of manual.token_log) {
+    tokenTotals.set(entry.projectId, (tokenTotals.get(entry.projectId) ?? 0) + entry.tokens);
+  }
+
   return projects.map((project) => {
     const rawOverrides = manual.overrides[project.id] ?? {};
     const overrideFields = Object.fromEntries(
@@ -23,9 +28,7 @@ export async function getMergedProjects(): Promise<MergedProject[]> {
       due_date: rawHidden.due_date ?? false,
       priority: rawHidden.priority ?? false,
     };
-    const total_tokens = manual.token_log
-      .filter((entry) => entry.projectId === project.id)
-      .reduce((sum, entry) => sum + entry.tokens, 0);
+    const total_tokens = tokenTotals.get(project.id) ?? 0;
 
     return {
       ...project,

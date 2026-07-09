@@ -1,21 +1,13 @@
 ---
-import { readManual } from '../lib/manual.js';
 import type { MergedProject } from '../types/project.js';
 import type { TokenLogEntry } from '../types/manual.js';
 
 interface Props {
   projects: MergedProject[];
+  tokenLog: TokenLogEntry[];
 }
 
-const { projects } = Astro.props;
-
-let tokenLog: TokenLogEntry[] = [];
-try {
-  const manual = readManual();
-  tokenLog = manual.token_log;
-} catch {
-  // Degrade gracefully — table renders empty
-}
+const { projects, tokenLog } = Astro.props;
 
 // Newest first
 const entries = [...tokenLog].reverse();
