@@ -3,20 +3,20 @@ import type { MergedProject } from '../types/project.js';
 
 interface Props {
   project: MergedProject | null;
+  today: string;
 }
 
-const { project } = Astro.props;
+const { project, today } = Astro.props;
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const STALENESS_THRESHOLD_DAYS = 14;
 
 // Build reason tags explaining why this project was chosen
-function buildReasonTags(p: MergedProject): string[] {
+function buildReasonTags(p: MergedProject, today: string): string[] {
   const tags: string[] = [];
 
   // Due-date urgency tags
   const due = p.due_date && DATE_RE.test(p.due_date) ? p.due_date : null;
-  const today = new Date().toISOString().slice(0, 10);
 
   if (due) {
     if (due < today) {
@@ -35,7 +35,7 @@ function buildReasonTags(p: MergedProject): string[] {
   else if (p.priority === 'medium') tags.push('medium priority');
 
   // Staleness tag
-  if (p.days_since_active > STALENESS_THRESHOLD_DAYS) {
+  if (Number.isFinite(p.days_since_active) && p.days_since_active > STALENESS_THRESHOLD_DAYS) {
     tags.push(`${p.days_since_active} days stale`);
   }
 
@@ -45,7 +45,7 @@ function buildReasonTags(p: MergedProject): string[] {
   return tags;
 }
 
-const reasonTags = project ? buildReasonTags(project) : [];
+const reasonTags = project ? buildReasonTags(project, today) : [];
 ---
 
 {project && (

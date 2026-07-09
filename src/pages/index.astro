@@ -44,7 +44,8 @@ const sectionLabels: Record<typeof BOARD_STATUSES[number], string> = {
   'on-hold': 'On Hold',
 };
 
-const recommendation = getRecommendation(allProjects);
+const todayStr = new Date().toISOString().slice(0, 10);
+const recommendation = getRecommendation(allProjects, todayStr);
 ---
 
 <!DOCTYPE html>
@@ -72,7 +73,7 @@ const recommendation = getRecommendation(allProjects);
         </div>
       )}
 
-      <NextUp project={recommendation} />
+      <NextUp project={recommendation} today={todayStr} />
 
       <WeeklyDigest projects={allProjects} />
 

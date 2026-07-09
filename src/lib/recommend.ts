@@ -33,7 +33,7 @@ export function scoreProject(p: MergedProject, today: string): number {
 
   const priority = PRIORITY_SCORE[p.priority] ?? 0;
   const statusWeight = STATUS_WEIGHT[p.status] ?? 0;
-  const staleness = p.days_since_active > STALENESS_THRESHOLD_DAYS ? 1 : 0;
+  const staleness = Number.isFinite(p.days_since_active) && p.days_since_active > STALENESS_THRESHOLD_DAYS ? 1 : 0;
   const urgency = computeUrgency(p.due_date, today);
 
   return priority + urgency + statusWeight + staleness;
@@ -111,7 +111,7 @@ export function getRecommendation(
     }
 
     // 4. Alphabetical by id
-    return a.project.id.localeCompare(b.project.id);
+    return a.project.id.localeCompare(b.project.id, 'en');
   });
 
   return scored[0].project;
