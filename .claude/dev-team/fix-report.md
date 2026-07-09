@@ -1,4 +1,19 @@
 ---
+# Fix Report — Item 6.2 (git.ts async Minor findings)
+**Date:** 2026-07-09
+**Findings addressed:** 2 of 2 total: 0 QA failures + 2 review findings (both Minor)
+
+## Changes Made
+- `src/lib/git.ts:65` — changed warn prefix from `[git] getCommitDates failed:` to `[git] getCommitDatesAsync failed:` to distinguish async failures from sync in logs — review Minor
+- `tests/git.test.ts:167-191` — updated two existing async error-path expectations to match renamed prefix; added ENOENT error-path test for `getCommitDatesAsync` (mirrors sync suite's ENOENT coverage) — review Minor
+
+## Disputed
+none
+
+## Deferred
+none
+
+---
 # Fix Report — Item 3.2 (Inbox.astro review findings)
 **Date:** 2026-07-08
 **Findings addressed:** 4 of 4 total
