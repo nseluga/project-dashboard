@@ -465,6 +465,59 @@ describe('POST /api/token-log', () => {
 
     expect(res.headers.get('content-type')).toBe('application/json');
   });
+
+  it('returns 400 when body is a JSON array (shape guard)', async () => {
+    const ctx = {
+      request: new Request('http://localhost/api/token-log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify([{ projectId: 'alpha', tokens: 1000 }]),
+      }),
+    } as Parameters<typeof tokenLogPOST>[0];
+    const res = await tokenLogPOST(ctx);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+  });
+
+  it('returns 400 when body is JSON null (shape guard)', async () => {
+    const ctx = {
+      request: new Request('http://localhost/api/token-log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(null),
+      }),
+    } as Parameters<typeof tokenLogPOST>[0];
+    const res = await tokenLogPOST(ctx);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+  });
+
+  it('returns 400 when note exceeds 200 characters', async () => {
+    mockReadManual.mockReturnValue(makeManual());
+    const longNote = 'x'.repeat(201);
+    const ctx = makeContext({ projectId: 'alpha', tokens: 1000, note: longNote });
+    const res = await tokenLogPOST(ctx);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.ok).toBe(false);
+    expect(json.error).toMatch(/200/);
+  });
+
+  it('accepts a note of exactly 200 characters', async () => {
+    mockReadManual.mockReturnValue(makeManual());
+    const exactNote = 'x'.repeat(200);
+    const ctx = makeContext({ projectId: 'alpha', tokens: 1000, note: exactNote });
+    const res = await tokenLogPOST(ctx);
+
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.ok).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------------
