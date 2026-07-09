@@ -1,0 +1,132 @@
+---
+import type { MergedProject } from '../types/project.js';
+
+interface MomentumEntry {
+  project: MergedProject;
+  commitDates: string[];
+  commitCount: number;
+  stalled: boolean;
+}
+
+interface Props {
+  momentumData: MomentumEntry[];
+  activeScope: '7' | '30' | '90';
+  sinceDays: number;
+}
+
+const { momentumData, activeScope, sinceDays } = Astro.props;
+
+const SCOPES = [
+  { label: '7d', value: '7' },
+  { label: '30d', value: '30' },
+  { label: '90d', value: '90' },
+] as const;
+
+// Build a Set of YYYY-MM-DD strings for each project's commit dates
+// so we can quickly check which days in the window have commits.
+function buildActiveDaySet(commitDates: string[]): Set<string> {
+  const days = new Set<string>();
+  for (const iso of commitDates) {
+    // Slice the date portion from the ISO string (first 10 chars)
+    days.add(iso.slice(0, 10));
+  }
+  return days;
+}
+
+// Build the array of YYYY-MM-DD day labels for the scope window,
+// oldest first. Day 0 = today, day (sinceDays-1) = oldest.
+function buildDayWindow(sinceDays: number): string[] {
+  const days: string[] = [];
+  const now = new Date();
+  for (let i = sinceDays - 1; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    days.push(d.toISOString().slice(0, 10));
+  }
+  return days;
+}
+
+const dayWindow = buildDayWindow(sinceDays);
+---
+
+<div>
+  <!-- Scope selector -->
+  <nav aria-label="Activity scope" class="flex gap-2 mb-6">
+    {SCOPES.map(({ label, value }) => (
+      <a
+        href={`/momentum?scope=${value}`}
+        class={[
+          'px-3 py-1 rounded text-sm font-medium',
+          activeScope === value
+            ? 'bg-gray-800 text-white'
+            : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50',
+        ].join(' ')}
+        aria-current={activeScope === value ? 'page' : undefined}
+      >
+        {label}
+      </a>
+    ))}
+  </nav>
+
+  <!-- Column headers -->
+  <div class="grid grid-cols-[1fr_auto_auto_auto] gap-x-4 items-center mb-2 px-2">
+    <span class="text-xs font-semibold uppercase tracking-wide text-gray-400">Project</span>
+    <span class="text-xs font-semibold uppercase tracking-wide text-gray-400">Activity ({sinceDays}d)</span>
+    <span class="text-xs font-semibold uppercase tracking-wide text-gray-400 text-right">Commits</span>
+    <span class="text-xs font-semibold uppercase tracking-wide text-gray-400 text-right">Status</span>
+  </div>
+
+  <!-- Project rows -->
+  <div class="flex flex-col divide-y divide-gray-100">
+    {momentumData.map(({ project, commitDates, commitCount, stalled }) => {
+      const activeDays = buildActiveDaySet(commitDates);
+      const badgeClass = stalled
+        ? 'bg-amber-100 text-amber-700'
+        : 'bg-green-100 text-green-700';
+      const badgeLabel = stalled ? 'stalled' : 'moving';
+
+      return (
+        <div class="grid grid-cols-[1fr_auto_auto_auto] gap-x-4 items-center py-3 px-2">
+          <!-- Project name + days since active -->
+          <div class="min-w-0">
+            <p class="text-sm font-medium text-gray-900 truncate">{project.name}</p>
+            <p class="text-xs text-gray-500 mt-0.5">{project.days_since_active}d since active</p>
+          </div>
+
+          <!-- Activity bar -->
+          <div class="flex items-center gap-px" aria-label={`${project.name} activity over ${sinceDays} days`}>
+            {project.repo ? (
+              dayWindow.map((day) => (
+                <span
+                  class={[
+                    'w-2 h-4 rounded-sm',
+                    activeDays.has(day) ? 'bg-blue-500' : 'bg-gray-200',
+                  ].join(' ')}
+                  title={day}
+                />
+              ))
+            ) : (
+              <span class="text-xs text-gray-400 italic whitespace-nowrap">no local repo</span>
+            )}
+          </div>
+
+          <!-- Commit count -->
+          <span class="text-sm font-mono text-gray-700 text-right tabular-nums">
+            {project.repo ? commitCount : '—'}
+          </span>
+
+          <!-- Stalled / moving badge -->
+          <span
+            class={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${badgeClass}`}
+          >
+            {badgeLabel}
+          </span>
+        </div>
+      );
+    })}
+
+    {momentumData.length === 0 && (
+      <p class="text-sm text-gray-400 italic py-4">No projects found.</p>
+    )}
+  </div>
+</div>
