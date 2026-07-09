@@ -102,6 +102,9 @@ const safeGithub =
     </p>
   )}
 
-  <!-- Inline edit controls -->
-  <EditControls project={project} />
+  <!-- Inline edit controls (collapsed by default) -->
+  <details class="mt-1">
+    <summary class="cursor-pointer text-xs font-medium text-gray-400 hover:text-gray-600 select-none list-none">Edit</summary>
+    <EditControls project={project} />
+  </details>
 </article>
