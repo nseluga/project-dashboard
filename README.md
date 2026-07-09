@@ -1,22 +1,36 @@
 # project-dashboard
 
 A single, local dashboard for tracking Nate's active projects — status, staleness, next
-step, due dates — plus a weekly digest and a quick-capture inbox. It reads each project's
-status from the READMEs in `~/os/projects/` and stores its own writable data (due dates,
-inbox) in `data/manual.json`.
+step, due dates — plus a weekly digest and a quick-capture inbox. Reads project state from
+YAML frontmatter in `~/os/projects/*/README.md`; stores its own writable data (due dates,
+field overrides, inbox) in `data/manual.json`.
 
-**Status:** planning complete, app not yet built. See:
-- [`plan.md`](./plan.md) — design doc (purpose, inventory, data model, tech stack, non-goals)
-- [`progress.md`](./progress.md) — dependency-ordered build checklist for `dev-team-auto`
+## Setup
 
-## Stack (planned)
+```sh
+git clone <this-repo> project-dashboard
+cd project-dashboard
+npm install
+cp .env.example .env
+```
 
-Astro + Tailwind + TypeScript, SSR via `@astrojs/node`. Local-only; run with `npm run dev`.
-
-## Build
-
-The app is built by running `dev-team-auto` against `progress.md`:
+Edit `.env` and set `OS_PROJECTS_DIR` to the absolute path of your projects directory:
 
 ```
-cd ~/project-dashboard && claude   # then invoke /dev-team-auto
+OS_PROJECTS_DIR=/Users/yourname/os/projects
 ```
+
+## Run
+
+```sh
+npm run dev
+```
+
+Open `http://localhost:4321` in your browser.
+
+`data/manual.json` is created automatically on the first write (due date, override, or inbox
+item) and is gitignored — it stays local to your machine.
+
+## Stack
+
+Astro 5 SSR + Tailwind CSS + TypeScript, served via `@astrojs/node` in standalone mode.

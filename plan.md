@@ -40,7 +40,7 @@
 ## STAGE 1 — Data layer
 
 ### 1.1 — `src/lib/projects.ts`: read frontmatter + resolve `last_active`
-- **status:** not started
+- **status:** done
 - **track:** full
 - **owns_files:** `src/lib/projects.ts`, `src/types/project.ts`
 - **blocked_by:** 0.1
@@ -55,7 +55,7 @@
 - **done when:** `getProjects()` returns exactly 6 projects (the confirmed inventory); `os-evals` is excluded; `days_since_active` is a non-negative integer; projects with a local `repo` path get a git-derived `last_active`; `nba-shot-value` (no local clone) falls back to frontmatter `last_active`; a Vitest unit test (or similar) confirms the count and the exclusion.
 
 ### 1.2 — `src/lib/manual.ts`: safe read/write for `data/manual.json`
-- **status:** not started
+- **status:** done
 - **track:** full
 - **owns_files:** `src/lib/manual.ts`, `src/types/manual.ts`, `data/.gitkeep`, `.gitignore` update
 - **blocked_by:** 0.1
@@ -68,7 +68,7 @@
 - **done when:** `readManual()` returns the empty shape when the file is absent; `writeManual()` round-trips correctly; atomic rename is used (not direct overwrite); `data/manual.json` is gitignored; a unit test covers both functions.
 
 ### 1.3 — Merge layer: `getMergedProjects()`
-- **status:** not started
+- **status:** done
 - **track:** light
 - **owns_files:** `src/lib/merge.ts`, `src/types/project.ts` (extend with `MergedProject`)
 - **blocked_by:** 1.1, 1.2
@@ -82,7 +82,7 @@
 - **done when:** a unit test confirms: overrides take precedence over frontmatter; `overdue` is `true` when `due_date` is yesterday; `overdue` is `false` when `due_date` is tomorrow; `overdue` is `false` when `due_date` is null.
 
 ### 1.4 — API routes: inbox, due-date, override
-- **status:** not started
+- **status:** done
 - **track:** full
 - **owns_files:** `src/pages/api/inbox.ts`, `src/pages/api/due-date.ts`, `src/pages/api/override.ts`
 - **blocked_by:** 1.2
@@ -100,7 +100,7 @@
 ## STAGE 2 — Core board
 
 ### 2.1 — Board page: project cards grouped by status
-- **status:** not started
+- **status:** done
 - **track:** full
 - **owns_files:** `src/pages/index.astro`, `src/components/ProjectCard.astro`
 - **blocked_by:** 1.3
@@ -109,7 +109,7 @@
 - **done when:** `npm run dev` → `localhost:4321` renders all 6 projects; active bucket has os + patio; in-progress has portfolio-website; on-hold has pitcher-injury-risk + batting-average-ability; each card shows all fields; overdue projects are visually distinct (red); no console errors.
 
 ### 2.2 — Collapsed "Completed" section
-- **status:** not started
+- **status:** done
 - **track:** light
 - **owns_files:** `src/pages/index.astro` (extend)
 - **blocked_by:** 2.1
@@ -118,7 +118,7 @@
 - **done when:** nba-shot-value is hidden by default; expanding the `<details>` shows it with the full card; it does not appear in any status bucket above; the collapse/expand works without JavaScript.
 
 ### 2.3 — Inline edit controls: due date, status override, priority
-- **status:** not started
+- **status:** done
 - **track:** full
 - **owns_files:** `src/components/ProjectCard.astro` (extend), `src/components/EditControls.astro`
 - **blocked_by:** 2.1, 1.4
@@ -135,7 +135,7 @@
 ## STAGE 3 — v1 features
 
 ### 3.1 — Weekly digest section
-- **status:** not started
+- **status:** done
 - **track:** full
 - **owns_files:** `src/components/WeeklyDigest.astro`, `src/pages/index.astro` (include it)
 - **blocked_by:** 1.3
@@ -148,7 +148,7 @@
 - **done when:** a project with `days_since_active = 2` appears in "Moved"; a project with `due_date = yesterday` appears in "Overdue"; a project with `due_date = 3 days from now` appears in "Coming up"; each empty bucket shows "Nothing here."; renders without errors.
 
 ### 3.2 — Quick-capture inbox UI
-- **status:** not started
+- **status:** done
 - **track:** full
 - **owns_files:** `src/components/Inbox.astro`, `src/pages/index.astro` (include it)
 - **blocked_by:** 1.4
@@ -165,7 +165,7 @@
 ## STAGE 4 — Polish & verify
 
 ### 4.1 — Tailwind styling pass
-- **status:** not started
+- **status:** done
 - **track:** light
 - **owns_files:** `src/components/*.astro`, `src/pages/index.astro`
 - **blocked_by:** 3.1, 3.2

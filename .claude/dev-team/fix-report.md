@@ -1,4 +1,57 @@
 ---
+# Fix Report — Item 3.2 (Inbox.astro review findings)
+**Date:** 2026-07-08
+**Findings addressed:** 4 of 4 total
+
+## Changes Made
+- `src/components/Inbox.astro:5–12` — wrapped `readManual()` in try/catch; on error sets `loadError` and falls back to `items = []`; template renders "Could not load inbox items." banner when `loadError` is set — review Important 1
+- `src/components/Inbox.astro:99–114` — added `fetchWithTimeout` helper with `AbortController` (10 s timeout, `clearTimeout` in `finally`); AbortError rethrown as `'Request timed out'`; both POST and DELETE fetch calls now use it — review Important 2
+- `src/pages/api/inbox.ts:28–33` — added `text.length > 500` guard returning `400 { ok: false, error: 'text must be 500 characters or fewer' }` before the mutex write — review Important 3 (borderline)
+- `src/components/Inbox.astro:41` — added `aria-describedby="inbox-add-error"` to the `inbox-text` input — review Minor
+
+## Disputed
+none
+
+## Deferred
+- Delete failures showing only in console (Minor 5) — acceptable for a local tool; explicitly excluded from fix scope
+- `formatCreated` mutation concern (Minor 6) — logic is correct; explicitly excluded from fix scope
+
+---
+# Fix Report — Item 3.1 (digest.ts and WeeklyDigest.astro review findings)
+**Date:** 2026-07-08
+**Findings addressed:** 4 of 4 total: 0 QA failures + 4 review findings (2 Important, 2 Minor)
+
+## Changes Made
+- `src/lib/digest.ts:35` — added `due >= resolvedToday &&` lower bound on comingUp condition; past-due-date projects not flagged overdue are now excluded from the bucket — review Important
+- `src/lib/digest.ts:35` — added `DATE_RE = /^\d{4}-\d{2}-\d{2}$/` constant; `project.due_date` normalised to null when malformed before any bucket comparison — review Important
+- `src/lib/digest.ts:19-23` — replaced split default-param `new Date()` calls with a single `const now = new Date()` at top of function body; both resolved dates derive from it — review Minor
+- `src/components/WeeklyDigest.astro:11-13` — removed redundant explicit date computation; `computeDigestBuckets(projects)` now called with no date args, using function defaults — review Minor
+
+## Disputed
+none
+
+## Deferred
+none
+
+---
+# Fix Report — Item 2.3 (edit controls review findings)
+**Date:** 2026-07-08
+**Findings addressed:** 4 of 4 total: 0 QA failures + 4 review findings (1 Critical, 2 Important, 1 Minor)
+
+## Changes Made
+
+- `src/pages/api/override.ts:5` — added `ALLOWED_OVERRIDE_FIELDS` Set; unknown `field` values now return `400 { ok: false, error: 'Invalid field' }` before any read/write — review Critical
+- `src/components/EditControls.astro:147–170` — wrapped `fetch` in `postJson` with `AbortController`; 10 s timeout aborts the request and rethrows as `'Request timed out'`; `clearTimeout` in `finally` — review Important
+- `src/pages/api/due-date.ts:34–40` — added `/^\d{4}-\d{2}-\d{2}$/` regex guard on `date`; non-conforming values return `400 { ok: false, error: 'date must be YYYY-MM-DD' }` before mutex entry — review Important
+- `src/components/EditControls.astro:175` — hoisted `[dateInput, setBtn, clearBtn].filter(Boolean)` to a single `const dueDateControls` after the element queries; removed duplicate local declarations in both click handlers — review Minor
+
+## Disputed
+none
+
+## Deferred
+none
+
+---
 # Fix Report — Item 2.1 (board page review findings)
 **Date:** 2026-07-08
 **Findings addressed:** 4 of 4 total: 0 QA failures + 4 review findings (2 Important, 2 Minor)
