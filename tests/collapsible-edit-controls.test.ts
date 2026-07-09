@@ -67,8 +67,8 @@ describe('Item 5.1: ProjectCard.astro source — <details> wrapper around EditCo
   it('<summary> uses low-weight text styling (no bold/prominent classes)', () => {
     const summaryMatch = cardSource.match(/<summary[^>]*>/);
     expect(summaryMatch, '<summary> tag not found').toBeTruthy();
-    // Must use muted color class (text-gray-*)
-    expect(summaryMatch![0]).toMatch(/text-gray-/);
+    // Must use muted color class (text-slate-*)
+    expect(summaryMatch![0]).toMatch(/text-slate-/);
     // Must be small text
     expect(summaryMatch![0]).toMatch(/text-xs/);
   });
