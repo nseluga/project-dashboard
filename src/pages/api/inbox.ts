@@ -25,6 +25,13 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 
+  if (text.length > 500) {
+    return new Response(
+      JSON.stringify({ ok: false, error: 'text must be 500 characters or fewer' }),
+      { status: 400, headers: JSON_HEADERS },
+    );
+  }
+
   const item: InboxItem = {
     id: crypto.randomUUID(),
     text,

@@ -2,8 +2,14 @@
 import { readManual } from '../lib/manual.js';
 import type { InboxItem } from '../types/manual.js';
 
-const manual = readManual();
-const items: InboxItem[] = manual.inbox.filter((item) => !item.done);
+let items: InboxItem[] = [];
+let loadError: string | null = null;
+try {
+  const manual = readManual();
+  items = manual.inbox.filter((item) => !item.done);
+} catch (e) {
+  loadError = (e as Error).message;
+}
 
 function formatCreated(created: string): string {
   const createdDate = new Date(created);
@@ -32,6 +38,7 @@ function formatCreated(created: string): string {
       type="text"
       placeholder="Quick note..."
       autocomplete="off"
+      aria-describedby="inbox-add-error"
       class="flex-1 rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
     />
     <button
@@ -49,10 +56,15 @@ function formatCreated(created: string): string {
     aria-live="polite"
   ></p>
 
+  <!-- Load error -->
+  {loadError && (
+    <p class="text-xs text-red-600 mb-3" role="alert">Could not load inbox items.</p>
+  )}
+
   <!-- Item list / empty state -->
-  {items.length === 0 ? (
+  {!loadError && items.length === 0 ? (
     <p class="text-sm text-gray-400 italic">No items.</p>
-  ) : (
+  ) : !loadError && (
     <ul class="flex flex-col gap-2" aria-label="Inbox items">
       {items.map((item) => (
         <li
@@ -85,6 +97,22 @@ function formatCreated(created: string): string {
 </section>
 
 <script>
+  async function fetchWithTimeout(url: string, options: RequestInit): Promise<Response> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    try {
+      const res = await fetch(url, { ...options, signal: controller.signal });
+      return res;
+    } catch (e) {
+      if ((e as Error).name === 'AbortError') {
+        throw new Error('Request timed out');
+      }
+      throw e;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
   // --- Add form ---
   const form = document.getElementById('inbox-add-form') as HTMLFormElement | null;
   const textInput = document.getElementById('inbox-text') as HTMLInputElement | null;
@@ -120,7 +148,7 @@ function formatCreated(created: string): string {
     if (textInput) textInput.disabled = true;
 
     try {
-      const res = await fetch('/api/inbox', {
+      const res = await fetchWithTimeout('/api/inbox', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, project: null }),
@@ -146,7 +174,7 @@ function formatCreated(created: string): string {
       deleteBtn.disabled = true;
 
       try {
-        const res = await fetch('/api/inbox', {
+        const res = await fetchWithTimeout('/api/inbox', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id }),
