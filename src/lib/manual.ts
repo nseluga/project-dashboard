@@ -32,7 +32,7 @@ export function readManual(): ManualData {
       overrides: { ...(parsed.overrides ?? {}) },
       due_dates: { ...(parsed.due_dates ?? {}) },
       inbox: [...(parsed.inbox ?? [])],
-      hidden_fields: { ...(parsed.hidden_fields ?? {}) },
+      hidden_fields: Object.fromEntries(Object.entries(parsed.hidden_fields ?? {}).map(([k, v]) => [k, { ...v }])),
     } as ManualData;
   } catch (e) {
     throw new Error(`[manual] failed to parse ${filePath}: ${(e as Error).message}`);

@@ -44,6 +44,10 @@ export const POST: APIRoute = async ({ request }) => {
     return await manualMutex.runExclusive(async () => {
       const manual = readManual();
 
+      if (!hidden && !manual.hidden_fields[projectId]) {
+        return new Response(JSON.stringify({ ok: true }), { status: 200, headers: JSON_HEADERS });
+      }
+
       if (!manual.hidden_fields[projectId]) {
         manual.hidden_fields[projectId] = {};
       }

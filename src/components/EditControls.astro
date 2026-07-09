@@ -71,6 +71,7 @@ const currentPriority = project.priority ?? '__reset__';
         </button>
       </div>
       <p class="text-xs text-red-600 hidden" data-error="due-date" role="alert" aria-live="polite"></p>
+      <p class="text-xs text-red-600 hidden" data-error="field-visibility-due_date" role="alert" aria-live="polite"></p>
     </fieldset>
   ) : (
     <div class="flex flex-col gap-1.5">
@@ -144,6 +145,7 @@ const currentPriority = project.priority ?? '__reset__';
         ))}
       </select>
       <p class="text-xs text-red-600 hidden" data-error="priority" role="alert" aria-live="polite"></p>
+      <p class="text-xs text-red-600 hidden" data-error="field-visibility-priority" role="alert" aria-live="polite"></p>
     </div>
   ) : (
     <div class="flex flex-col gap-1.5">
