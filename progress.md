@@ -8,7 +8,7 @@
 
 ## Where we're at (one paragraph)
 
-**Code:** Stages 0–3 are fully complete. The Astro SSR project is scaffolded, data layer (projects.ts, manual.ts, merge.ts) is implemented, all API routes are hardened (mutex, try/catch, field whitelists, date validation), the board page with project cards and edit controls is live, a weekly digest and quick-capture inbox are built. Only stage 4 (Tailwind styling pass + README) remains.
+**v1 is shipped.** All stages 0–4 are complete. The Astro SSR project is scaffolded, data layer solid (projects.ts, manual.ts, merge.ts), all API routes hardened, the project board with edit controls is live, weekly digest is built, and README is written. Next phase is v1.5 UX improvements (collapsible edit controls, per-project field hide toggles) followed by v2 features (momentum view, what-to-work-on-next recommendation, Claude token tracking, inbox removal).
 
 ## Status by stage
 
@@ -28,6 +28,12 @@
 | 3 | 3.2 — Quick-capture inbox UI | done full — Inbox.astro with try/catch error boundary, AbortController fetch timeout, 500-char text cap, aria-describedby, 206-test suite (10db84a) |
 | 4 | 4.1 — Tailwind styling pass | done light — status/priority badge colors, overdue red border, section separators, bg-slate-50 on digest+inbox, 206-test suite (6bfba44) |
 | 4 | 4.2 — `README.md`: how to run | done trivial — setup/run instructions, data/manual.json note, stack section (e90d94b) |
+| 5 | 5.1 — Collapsible edit controls | todo |
+| 5 | 5.2 — Per-project field hide toggles | todo |
+| 6 | 6.1 — Remove inbox | todo |
+| 6 | 6.2 — Momentum view | todo |
+| 6 | 6.3 — "What to work on next" recommendation | todo |
+| 6 | 6.4 — Claude token tracking | todo |
 
 ## How to update this file
 

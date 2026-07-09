@@ -1,10 +1,10 @@
 # Project Dashboard — Execution Plan
 
-> **What it is:** A single, local web page that shows the state of every project Nate is working on — status, staleness, next step, due date — sourced from each project's README in `~/os/projects/`. Includes a weekly digest and a quick-capture inbox. This is a **state board, not a task manager**: each project's own `PLAN.md`/`PROGRESS.md` remain the detailed trackers. The dashboard answers one question — *what am I working on, where does it stand, and what's due when.*
+> **What it is:** A single, local web page that shows the state of every project Nate is working on — status, staleness, next step, due date — sourced from each project's README in `~/os/projects/`. Includes a weekly digest, a momentum view, a "what to work on next" recommendation, and Claude token tracking. This is a **state board, not a task manager**: each project's own `PLAN.md`/`PROGRESS.md` remain the detailed trackers. The dashboard answers one question — *what am I working on, where does it stand, and what's due when.*
 
 > **Data model — two stores, read-mostly:**
 > - **Project READMEs** (`~/os/projects/<id>/README.md`, YAML frontmatter): `id` (dir name), `name`, `summary`, `repo`, `github`, `tags`, `status`, `priority`, `next_step`, `last_active`. `last_active` prefers live git (`git -C <repo> log -1 --format=%cI`); falls back to frontmatter. Computed: `days_since_active`, `overdue`.
-> - **`data/manual.json`** (dashboard-owned, writable): `overrides` (per-project field overrides), `due_dates`, `inbox` items. Merge order: frontmatter → overridden by `manual.json.overrides`. File shape: `{ "overrides": {}, "due_dates": {}, "inbox": [] }`.
+> - **`data/manual.json`** (dashboard-owned, writable): `overrides` (per-project field overrides), `due_dates`, `hidden_fields` (per-project controls to hide), `token_log` (Claude token usage entries). Merge order: frontmatter → overridden by `manual.json.overrides`. File shape: `{ "overrides": {}, "due_dates": {}, "hidden_fields": {}, "token_log": [] }`.
 
 > **Tech stack:** Astro + Tailwind + TypeScript, SSR via `@astrojs/node` (`output: 'server'`). Frontmatter parsed with `gray-matter`. `OS_PROJECTS_DIR` env var (default `~/os/projects`) points to the projects dir. API routes persist to `data/manual.json`. Run with `npm run dev`. No deploy — local personal tool.
 
@@ -190,9 +190,103 @@
 
 ---
 
+---
+
+## STAGE 5 — v1.5 UX improvements
+
+### 5.1 — Collapsible edit controls (read-only default)
+- **status:** todo
+- **track:** full
+- **owns_files:** `src/components/ProjectCard.astro`, `src/components/EditControls.astro`
+- **blocked_by:** 4.2
+- **blocks:** 5.2
+- **task:** Change each project card so edit controls are collapsed/hidden by default. The card renders all fields read-only. Each card gets a small "Edit" button (or "⋮" icon) that toggles visibility of the `EditControls` panel using a `<details>`/`<summary>` element — no page reload, no added JS beyond what's already in EditControls. The `<summary>` should say "Edit" and be styled subtly (small, muted). The `EditControls` component itself is unchanged; just wrap it in `<details class="..."><summary>Edit</summary> ... </details>` inside `ProjectCard.astro`. Read `~/portfolio/STANDARDS.md` before touching any Tailwind.
+- **done when:** visiting the dashboard shows all cards with edit controls hidden by default; clicking "Edit" on any card expands its controls; all existing edit functionality (due date, status override, priority) still works correctly after expand; no regressions in any other card behavior; no console errors.
+
+### 5.2 — Per-project hide toggles for due date + priority fields
+- **status:** todo
+- **track:** full
+- **owns_files:** `src/pages/api/field-visibility.ts` (new), `src/lib/manual.ts` (extend), `src/types/manual.ts` (extend), `src/lib/merge.ts` (extend), `src/types/project.ts` (extend MergedProject), `src/components/EditControls.astro` (extend)
+- **blocked_by:** 5.1
+- **blocks:** nothing
+- **task:** Add per-project settings to hide the due date and/or priority controls for projects that don't use them. Implementation:
+  1. Extend `ManualData` in `src/types/manual.ts` with `hidden_fields: Record<string, { due_date?: boolean; priority?: boolean }>`. Default empty `{}` in `readManual()`.
+  2. New API route `POST /api/field-visibility` — body `{ projectId: string, field: 'due_date' | 'priority', hidden: boolean }`. Validates field name (400 if not one of the two allowed values). Updates `manual.hidden_fields[projectId][field]`. Returns `{ ok: true }`.
+  3. In `getMergedProjects()` (merge.ts), attach `hidden_fields: { due_date: boolean; priority: boolean }` to each `MergedProject`, reading from `manual.hidden_fields[id]` (default both to `false`).
+  4. In `EditControls.astro`, accept the updated `MergedProject` prop. Conditionally render the due date fieldset only when `!project.hidden_fields.due_date`. Conditionally render the priority select only when `!project.hidden_fields.priority`. Inside each section (when visible), add a small "Hide this field" link/button that POSTs `{ projectId, field, hidden: true }` to `/api/field-visibility` and reloads. When a section is hidden, the expanded edit panel shows a "Show due date" / "Show priority" restore button instead (posts `hidden: false`).
+- **done when:** hiding due date removes the due date fieldset from that project's expanded edit controls and persists on reload; hiding priority removes the priority select and persists; the restore button brings each back; other projects are unaffected; `POST /api/field-visibility` with an invalid field name returns 400; tests cover the new API route and the merge layer's hidden_fields passthrough.
+
+---
+
+## STAGE 6 — v2 features
+
+### 6.1 — Remove inbox
+- **status:** todo
+- **track:** light
+- **owns_files:** `src/components/Inbox.astro` (delete), `src/pages/api/inbox.ts` (delete), `src/pages/index.astro` (remove import + usage), `src/types/manual.ts` (keep InboxItem for compat), `src/lib/manual.ts` (keep inbox field for compat)
+- **blocked_by:** 4.2
+- **blocks:** 6.2, 6.3, 6.4
+- **task:** Remove the quick-capture inbox from the UI entirely. Delete `src/components/Inbox.astro` and `src/pages/api/inbox.ts`. Remove the Inbox import and `<Inbox />` usage from `src/pages/index.astro`. Keep the `InboxItem` type and `inbox` field in `ManualData` for backward compat (so existing `data/manual.json` files with inbox entries don't break on parse), but remove all rendering and interaction. Remove inbox-related tests, but keep the data model compiling correctly. Update `readManual()` default shape to still include `inbox: []` so any existing field is preserved on read and harmlessly ignored.
+- **done when:** the page renders with no inbox UI; `GET /api/inbox` and `POST /api/inbox` return 404 (routes deleted); no TypeScript errors; no broken imports; existing `manual.json` with inbox data still parses without errors; test suite passes.
+
+### 6.2 — Momentum view: project activity timeline
+- **status:** todo
+- **track:** full
+- **owns_files:** `src/pages/momentum.astro` (new page), `src/lib/git.ts` (new), `src/components/MomentumView.astro` (new)
+- **blocked_by:** 6.1
+- **blocks:** nothing
+- **task:** Build a `/momentum` page showing recent git activity and staleness across all projects. Implementation:
+  1. Add `src/lib/git.ts` with `getCommitDates(repoPath: string, sinceDays: number): string[]` — runs `git -C <repoPath> log --format="%cI" --since="<N> days ago"` via `execSync`; returns ISO date strings. Returns `[]` if git errors or repo path is absent.
+  2. Create `src/pages/momentum.astro`. Read `scope` from URL search params (`?scope=7` / `?scope=30` / `?scope=90`; default 30). Call `getMergedProjects()` and for each project with a `repo`, call `getCommitDates()` with the scope. Build a data structure: `{ project, commitDates: string[], commitCount: number, stalled: boolean }[]` where `stalled = project.days_since_active > 14`.
+  3. Render `MomentumView.astro` which shows:
+     - A scope selector bar (3 links: "7d" / "30d" / "90d") styled as tab-like links. The active scope is highlighted. Each link is `href="/momentum?scope=N"`.
+     - Per project row: project name, a visual activity bar (Tailwind-only — a row of small squares or filled dots, one per day in the scope window, colored if a commit fell on that day), commit count, days since active, and a "moving" (green) or "stalled" (amber) badge.
+     - Projects without a local repo show "no local repo" in place of the activity bar.
+  4. Link to `/momentum` from the main `index.astro` nav (add a simple text link or tab at the top).
+- **done when:** `/momentum` renders all projects; the scope selector changes the window and highlights the active choice; projects with git repos show activity bars with commit dots; projects without repos show the placeholder; stalled projects have amber badge; moving projects have green badge; page loads without errors; tests cover `getCommitDates()` (happy path + error path).
+
+### 6.3 — "What to work on next" recommendation
+- **status:** todo
+- **track:** full
+- **owns_files:** `src/lib/recommend.ts` (new), `src/components/NextUp.astro` (new), `src/pages/index.astro` (add NextUp above weekly digest)
+- **blocked_by:** 6.1
+- **blocks:** 6.4
+- **task:** Add a "What to work on next" recommendation prominently at the top of the main board (above weekly digest). Implementation:
+  1. `src/lib/recommend.ts` — implement `scoreProject(p: MergedProject, today: string): number`:
+     - Priority: `high`=3, `medium`=2, `low`=1, absent=0
+     - Due date urgency (compare against `today` as YYYY-MM-DD): overdue=4, due within 3 days=3, due within 7 days=2, due within 14 days=1, no due date or beyond 14 days=0
+     - Status weight: `active`=2, `in-progress`=1, `on-hold`=0; exclude `complete`/`archived` (return -Infinity)
+     - Staleness bonus: `days_since_active > 14` → +1
+     Export `getRecommendation(projects: MergedProject[]): MergedProject | null` — filters out complete/archived, scores the rest, returns the highest-scoring project (ties: prefer higher priority, then earliest due date, then alphabetical by id). Returns `null` if no eligible projects.
+  2. `src/components/NextUp.astro` — accepts `project: MergedProject | null`. If null, renders nothing. Otherwise renders a visually distinct card (use a colored left border or subtle banner) showing: "Up next:" label, project name, next_step text, and a row of small tag pills indicating why it was chosen (e.g. "overdue", "high priority", "14 days stale").
+  3. In `index.astro`, call `getRecommendation(projects)` and render `<NextUp project={recommendation} />` above `<WeeklyDigest />`.
+- **done when:** `getRecommendation()` returns the correct project for representative test cases (overdue wins, tie-breaking works, complete/archived excluded, null when all projects are complete); the `NextUp` component renders on the page with the correct project; an empty/all-complete projects set renders nothing; unit tests cover the scoring and tie-breaking logic.
+
+### 6.4 — Claude token tracking (manual capture)
+- **status:** todo
+- **track:** full
+- **owns_files:** `src/pages/api/token-log.ts` (new), `src/components/TokenTracker.astro` (new), `src/lib/manual.ts` (extend), `src/types/manual.ts` (extend), `src/pages/index.astro` (add TokenTracker at bottom)
+- **blocked_by:** 6.3
+- **blocks:** nothing
+- **task:** Add lightweight manual Claude token usage logging per project. Implementation:
+  1. Extend `ManualData` in `src/types/manual.ts` with `token_log: TokenLogEntry[]` where `TokenLogEntry = { id: string; projectId: string; tokens: number; note: string | null; created: string }`. Default `token_log: []` in `readManual()`.
+  2. New API route `src/pages/api/token-log.ts`:
+     - `POST` — body `{ projectId: string, tokens: number, note?: string }`. Validates: `projectId` must be a non-empty string; `tokens` must be a positive integer. Appends `{ id: crypto.randomUUID(), projectId, tokens: Number(tokens), note: note ?? null, created: new Date().toISOString() }` to `manual.token_log`. Returns `{ ok: true }`.
+     - `DELETE` — body `{ id: string }`. Removes entry with that id. Returns `{ ok: true }` or `404 { ok: false, error }` if not found.
+  3. Extend `getMergedProjects()` (merge.ts) to attach `total_tokens: number` to each `MergedProject` — sum of `tokens` for all `token_log` entries matching `projectId`. Default 0.
+  4. In `ProjectCard.astro`, render a small "Tokens: N" line below the repo/github section when `project.total_tokens > 0`.
+  5. `src/components/TokenTracker.astro` — a section at the bottom of `index.astro` with:
+     - A form: project `<select>` (all project ids/names), token count `<input type="number" min="1">`, optional note `<input type="text">`, "Log" button. Posts to `/api/token-log`. Reloads on success.
+     - A table of recent entries (newest first) showing: project name, tokens, note (if any), date ("today" / "N days ago"), and a "×" delete button (posts DELETE to `/api/token-log`).
+     - Empty state: "No token logs yet." when the list is empty.
+- **done when:** logging a token entry persists and appears in the table; deleting removes it; a project card with logged tokens shows the total; the token count in the project card updates correctly after logging and deleting; invalid input (non-numeric tokens, zero/negative tokens, missing projectId) returns 400; empty state renders correctly; tests cover the API routes and the `total_tokens` merge computation.
+
+---
+
 ## Order of execution (top to bottom, no skipping)
 ```
 0.1 → 0.2 → 1.1 → 1.2 → 1.3 → 1.4 → 2.1 → 2.2 → 2.3 → 3.1 → 3.2 → 4.1 → 4.2
+→ 5.1 → 5.2 → 6.1 → 6.2 → 6.3 → 6.4
 ```
 
 Each item must reach QA PASS + clean review before the next starts. The `blocked_by` fields explain the ordering — do not jump ahead.
@@ -202,4 +296,5 @@ Each item must reach QA PASS + clean review before the next starts. The `blocked
 - Per-project task management (PLAN/PROGRESS in project repos are the detailed trackers)
 - Writing status back into project code repos — only `~/os/projects` frontmatter and `data/manual.json` are written
 - Mobile/responsive polish beyond basic usability
-- v2 features: momentum view, "what to work on next" recommendation, cross-project time tracking, inbox→project triage flow, auto-derive `last_active` beyond local git clones
+- Cross-project time tracking (hours/sessions) — token tracking only
+- Auto-derive `last_active` beyond local git clones
