@@ -138,6 +138,12 @@ describe('scoreProject()', () => {
       const p = makeProject({ priority: '', status: 'on-hold', days_since_active: 5 });
       expect(scoreProject(p, TODAY)).toBe(0);
     });
+
+    it('does not add bonus when days_since_active is NaN', () => {
+      const pNaN = makeProject({ priority: '', status: 'on-hold', days_since_active: NaN });
+      const pRef = makeProject({ priority: '', status: 'on-hold', days_since_active: 5 });
+      expect(scoreProject(pNaN, TODAY)).toBe(scoreProject(pRef, TODAY));
+    });
   });
 
   describe('combined score', () => {

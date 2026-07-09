@@ -86,6 +86,7 @@ export function getRecommendation(
   const scored = eligible.map((p) => ({
     project: p,
     score: scoreProject(p, resolvedToday),
+    priorityScore: PRIORITY_SCORE[p.priority] ?? 0,
   }));
 
   scored.sort((a, b) => {
@@ -93,9 +94,7 @@ export function getRecommendation(
     if (b.score !== a.score) return b.score - a.score;
 
     // 2. Higher priority wins
-    const priorityDiff =
-      (PRIORITY_SCORE[b.project.priority] ?? 0) -
-      (PRIORITY_SCORE[a.project.priority] ?? 0);
+    const priorityDiff = b.priorityScore - a.priorityScore;
     if (priorityDiff !== 0) return priorityDiff;
 
     // 3. Earlier due date wins; null due dates come last
