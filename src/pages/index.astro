@@ -1,8 +1,10 @@
 ---
 import '../styles/global.css';
 import { getMergedProjects } from '../lib/merge.js';
+import { getRecommendation } from '../lib/recommend.js';
 import ProjectCard from '../components/ProjectCard.astro';
 import WeeklyDigest from '../components/WeeklyDigest.astro';
+import NextUp from '../components/NextUp.astro';
 import type { MergedProject } from '../types/project.js';
 
 let allProjects: MergedProject[] = [];
@@ -41,6 +43,8 @@ const sectionLabels: Record<typeof BOARD_STATUSES[number], string> = {
   'in-progress': 'In Progress',
   'on-hold': 'On Hold',
 };
+
+const recommendation = getRecommendation(allProjects);
 ---
 
 <!DOCTYPE html>
@@ -67,6 +71,8 @@ const sectionLabels: Record<typeof BOARD_STATUSES[number], string> = {
           Failed to load projects. Check OS_PROJECTS_DIR and data/manual.json.
         </div>
       )}
+
+      <NextUp project={recommendation} />
 
       <WeeklyDigest projects={allProjects} />
 
