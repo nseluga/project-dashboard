@@ -32,6 +32,19 @@ Project-specific conventions that extend the global dev-team review standards.
 - **Field whitelist at the API boundary**: Override endpoints that write to `manual.overrides` must validate `field` against the same allowlist used in `merge.ts` and return 400 on any unknown field. Relying solely on the merge layer's read-time filter leaves injected keys in `manual.json` where future consumers could pick them up.
 - **Date string format validation**: Any route that accepts a date string for storage in `manual.json` must validate the format (`/^\d{4}-\d{2}-\d{2}$/`) before writing. The `due_date < today` lexicographic comparison in `merge.ts` silently misbehaves for non-`YYYY-MM-DD` values.
 
+## Pages (src/pages/) — extended
+
+- **Avoid redundant readManual on composed pages**: When a child component (e.g. `TokenTracker`) and the page data layer (e.g. `getMergedProjects`) both read `manual.json`, pass the already-read data as a prop rather than calling `readManual()` again in the child's frontmatter — keeps the read path in one place and halves I/O per page render.
+
+## Data Merging (src/lib/merge.ts) — extended
+
+- **Pre-aggregate correlated log arrays**: Any `filter+reduce` that correlates a flat log array against a list of entities (e.g. `token_log` by `projectId`) must be preceded by a single-pass `Map` aggregation before the `projects.map()` loop. Placing `filter+reduce` inside the map produces O(n_projects × n_log_entries) work; a pre-aggregated `Map` makes each lookup O(1).
+
 ## Client Scripts (src/components/)
 
 - **Fetch timeout via AbortController**: Client-side `fetch` calls that disable form controls while in-flight must use `AbortController` with a ~10 s timeout. On `AbortError`, re-enable the controls and display a "request timed out" message — controls must never be permanently disabled if the server hangs.
+
+## Scoring / Pure Functions (src/lib/)
+
+- **Numeric field NaN guard**: Numeric fields from `MergedProject` (e.g. `days_since_active`) must be guarded with `Number.isFinite()` before threshold comparisons in scoring functions — `NaN` comparisons silently return `false` and produce wrong scores without any error signal. Pattern: `Number.isFinite(p.days_since_active) && p.days_since_active > THRESHOLD`.
+- **Locale-stable string comparison**: Tie-breaking or sorting on `id` or other string fields must use `localeCompare` with an explicit locale argument (e.g. `'en'`) to ensure consistent ordering across deployment environments. Plain `<`/`>` comparison is also acceptable for ASCII-only identifiers.
