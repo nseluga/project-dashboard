@@ -1,8 +1,6 @@
 # Project Dashboard — Progress
 
-> Tracks what has actually landed against [plan.md](./plan.md). Update this file (not just
-> the per-item `status` fields in plan.md) whenever an item is completed, so a fresh session
-> can tell what's done without re-auditing the codebase.
+> Complete history of what landed. All stages are done — [plan.md](./plan.md) has been cleaned to reflect this.
 
 **Last verified against code:** 2026-07-09
 
@@ -37,6 +35,3 @@
 | 6 | 6.5 — Smart notepad with auto-categorization | done full — NoteEntry type, POST/DELETE/PATCH /api/note, autoTag with word-boundary matching, /notes SSR page with grouping + inline errors; getMergedProjects() hoisted outside mutex (e8f4527) |
 | 7 | 7.1 — Typography, color, and visual polish | done full — Inter+Plus Jakarta Sans via BaseLayout, slate palette sweep, indigo accent, emerald status badges, border-l-4 card accents, focus-visible rings, Momentum indigo dots (d3e71b2) |
 
-## How to update this file
-
-After finishing a plan item: flip its row to `done [track] — [one-line summary + commit hash]` and update the matching `status:` field in `plan.md` to keep both in sync.
