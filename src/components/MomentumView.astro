@@ -1,12 +1,22 @@
 ---
 import type { MergedProject } from '../types/project.js';
 
+type MomentumStatus = 'surging' | 'moving' | 'slow' | 'stalled' | 'dormant';
+
 interface MomentumEntry {
   project: MergedProject;
   commitDates: string[];
   commitCount: number;
-  stalled: boolean;
+  momentumStatus: MomentumStatus;
 }
+
+const BADGE_CONFIG: Record<MomentumStatus, { label: string; cls: string }> = {
+  surging: { label: 'surging',  cls: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300' },
+  moving:  { label: 'moving',   cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' },
+  slow:    { label: 'slow',     cls: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400' },
+  stalled: { label: 'stalled',  cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' },
+  dormant: { label: 'dormant',  cls: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400' },
+};
 
 interface Props {
   momentumData: MomentumEntry[];
@@ -87,12 +97,9 @@ const activeDaySets = new Map<string, Set<string>>(
 
   <!-- Project rows -->
   <div class="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
-    {momentumData.map(({ project, commitCount, stalled }) => {
+    {momentumData.map(({ project, commitCount, momentumStatus }) => {
       const activeDays = activeDaySets.get(project.name) ?? new Set<string>();
-      const badgeClass = stalled
-        ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400'
-        : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400';
-      const badgeLabel = stalled ? 'stalled' : 'moving';
+      const { label: badgeLabel, cls: badgeClass } = BADGE_CONFIG[momentumStatus];
 
       return (
         <div class="grid grid-cols-[1fr_auto_auto_auto] gap-x-4 items-center py-3 px-2">
@@ -124,7 +131,7 @@ const activeDaySets = new Map<string, Set<string>>(
             {project.repo ? commitCount : '—'}
           </span>
 
-          <!-- Stalled / moving badge -->
+          <!-- Momentum status badge -->
           <span
             class={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${badgeClass}`}
           >

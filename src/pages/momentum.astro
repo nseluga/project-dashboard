@@ -8,10 +8,10 @@ import type { MergedProject } from '../types/project.js';
 const VALID_SCOPES = ['7', '30', '90'] as const;
 type Scope = typeof VALID_SCOPES[number];
 
-const rawScope = Astro.url.searchParams.get('scope') ?? '30';
+const rawScope = Astro.url.searchParams.get('scope') ?? '7';
 const scope: Scope = (VALID_SCOPES as readonly string[]).includes(rawScope)
   ? (rawScope as Scope)
-  : '30';
+  : '7';
 const sinceDays = parseInt(scope, 10);
 
 let allProjects: MergedProject[] = [];
@@ -23,13 +23,21 @@ try {
   loadError = true;
 }
 
-const STALE_THRESHOLD_DAYS = 14;
+type MomentumStatus = 'surging' | 'moving' | 'slow' | 'stalled' | 'dormant';
 
 interface MomentumEntry {
   project: MergedProject;
   commitDates: string[];
   commitCount: number;
-  stalled: boolean;
+  momentumStatus: MomentumStatus;
+}
+
+function getMomentumStatus(commitCount: number, daysSinceActive: number | null): MomentumStatus {
+  if (commitCount >= 5) return 'surging';
+  if (commitCount >= 2) return 'moving';
+  if (commitCount === 1) return 'slow';
+  if ((daysSinceActive ?? Infinity) <= 30) return 'stalled';
+  return 'dormant';
 }
 
 const momentumData: MomentumEntry[] = await Promise.all(
@@ -39,7 +47,7 @@ const momentumData: MomentumEntry[] = await Promise.all(
       project,
       commitDates,
       commitCount: commitDates.length,
-      stalled: (project.days_since_active ?? Infinity) > STALE_THRESHOLD_DAYS,
+      momentumStatus: getMomentumStatus(commitDates.length, project.days_since_active ?? null),
     };
   }),
 );
@@ -48,10 +56,10 @@ const momentumData: MomentumEntry[] = await Promise.all(
 <BaseLayout title="Momentum — Project Dashboard">
     <div class="max-w-5xl mx-auto px-4 py-8">
       <header class="mb-8">
-        <div class="flex items-center gap-4 mb-1">
+        <div class="flex items-center justify-between mb-1">
           <h1 class="font-display text-2xl font-bold text-slate-900 dark:text-slate-100">Momentum</h1>
           <nav aria-label="Site navigation" class="flex items-center gap-4">
-            <a href="/" class="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors duration-150">← Dashboard</a>
+            <a href="/" class="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors duration-150">Dashboard</a>
             <a href="/notes" class="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors duration-150">Notes</a>
             <a href="/tokens" class="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors duration-150">Tokens</a>
           </nav>

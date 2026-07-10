@@ -55,13 +55,12 @@ function pctNum(usage: ProjectUsage): number {
 <BaseLayout title="Token Usage — Project Dashboard">
   <div class="max-w-5xl mx-auto px-4 py-8">
     <header class="mb-8">
-      <div class="flex items-center gap-4 mb-1">
+      <div class="flex items-center justify-between mb-1">
         <h1 class="font-display text-2xl font-bold text-slate-900 dark:text-slate-100">Token Usage</h1>
-        <nav aria-label="Site navigation">
-          <a
-            href="/"
-            class="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors duration-150"
-          >← Dashboard</a>
+        <nav aria-label="Site navigation" class="flex items-center gap-4">
+          <a href="/" class="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors duration-150">Dashboard</a>
+          <a href="/momentum" class="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors duration-150">Momentum</a>
+          <a href="/notes" class="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors duration-150">Notes</a>
         </nav>
       </div>
       <p class="text-sm text-slate-500 dark:text-slate-500">Claude Code session token totals, read from <code class="font-mono text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-1 py-0.5 rounded">~/.claude/projects/</code>. Refreshes on every page load.</p>
