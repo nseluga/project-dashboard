@@ -6,16 +6,12 @@ import { getRecommendation } from '../lib/recommend.js';
 import ProjectCard from '../components/ProjectCard.astro';
 import WeeklyDigest from '../components/WeeklyDigest.astro';
 import NextUp from '../components/NextUp.astro';
-import TokenTracker from '../components/TokenTracker.astro';
 import type { MergedProject } from '../types/project.js';
-import type { TokenLogEntry } from '../types/manual.js';
 
 let allProjects: MergedProject[] = [];
-let tokenLog: TokenLogEntry[] = [];
 let loadError = false;
 try {
   const manual = readManual();
-  tokenLog = manual.token_log;
   allProjects = await getMergedProjects(manual);
 } catch (err) {
   console.error('[dashboard] getMergedProjects() failed:', err);
@@ -123,8 +119,6 @@ const recommendation = getRecommendation(allProjects, todayStr);
           </div>
         </details>
       )}
-
-      <TokenTracker projects={allProjects} tokenLog={tokenLog} />
 
     </div>
 </BaseLayout>
