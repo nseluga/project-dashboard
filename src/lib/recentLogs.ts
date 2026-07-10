@@ -4,11 +4,15 @@ import { join } from 'path';
 import type { MergedProject } from '../types/project.js';
 
 const CLAUDE_PROJECTS_DIR = join(homedir(), '.claude', 'projects');
-const MAJOR_SESSION_MIN_TOKENS = 2000;
+
+// Minimum output tokens to qualify as a "major" session worth surfacing.
+// Filters out quick one-off questions, memory updates, and trivial commands.
+export const MAJOR_SESSION_MIN_TOKENS = 20_000;
 
 export type SessionEntry = {
   sessionId: string;
   title: string;
+  description: string | null; // first substantive user message (what they actually asked)
   outputTokens: number;
   mtime: number;
   projectDirName: string;
@@ -34,25 +38,83 @@ function buildProjectDirMap(projects: MergedProject[]): Map<string, { name: stri
       map.set(repoDirName(p.repo), { name: p.name, id: p.id });
     }
   }
+  // project-dashboard is in SKIP_DIRS in projects.ts (avoids self-reference on the board)
+  // but we still need to label its log sessions correctly here.
+  const pdKey = repoDirName('~/project-dashboard');
+  if (!map.has(pdKey)) {
+    map.set(pdKey, { name: 'Project Dashboard', id: 'project-dashboard' });
+  }
   return map;
+}
+
+function matchProjectDir(
+  dirName: string,
+  projectDirMap: Map<string, { name: string; id: string }>,
+): { name: string; id: string } | null {
+  // Exact match
+  const exact = projectDirMap.get(dirName);
+  if (exact) return exact;
+
+  // Prefix match for worktree dirs:
+  // e.g. `-Users-nateseluga-os-evals--claude-worktrees-foo` → os-evals
+  // Worktree paths use double-dash `--` to separate repo dir from worktree name.
+  const doubleDash = dirName.indexOf('--');
+  if (doubleDash !== -1) {
+    const prefix = dirName.slice(0, doubleDash);
+    const prefixMatch = projectDirMap.get(prefix);
+    if (prefixMatch) return prefixMatch;
+  }
+
+  return null;
+}
+
+function extractFirstUserMessage(lines: string[]): string | null {
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    try {
+      const obj = JSON.parse(line);
+      if (obj.type !== 'user') continue;
+
+      const content = obj.message?.content;
+      let text = '';
+      if (Array.isArray(content)) {
+        for (const c of content) {
+          if (c?.type === 'text') { text = c.text; break; }
+        }
+      } else if (typeof content === 'string') {
+        text = content;
+      }
+
+      text = text.trim();
+      // Skip system injections, slash commands, and very short messages
+      if (!text || text.startsWith('<') || text.startsWith('/') || text.length < 25) continue;
+
+      return text.slice(0, 160).replace(/\n+/g, ' ');
+    } catch {
+      // skip malformed lines
+    }
+  }
+  return null;
 }
 
 async function parseSession(filePath: string): Promise<{
   title: string | null;
+  description: string | null;
   outputTokens: number;
   mtime: number;
   sessionId: string;
 } | null> {
-  let outputTokens = 0;
-  let title: string | null = null;
-
   try {
     const [fileStat, content] = await Promise.all([
       stat(filePath),
       readFile(filePath, 'utf-8'),
     ]);
 
-    for (const line of content.split('\n')) {
+    const lines = content.split('\n');
+    let title: string | null = null;
+    let outputTokens = 0;
+
+    for (const line of lines) {
       if (!line.trim()) continue;
       try {
         const obj = JSON.parse(line);
@@ -67,8 +129,9 @@ async function parseSession(filePath: string): Promise<{
       }
     }
 
+    const description = extractFirstUserMessage(lines);
     const sessionId = filePath.split('/').pop()!.replace('.jsonl', '');
-    return { title, outputTokens, mtime: fileStat.mtimeMs, sessionId };
+    return { title, description, outputTokens, mtime: fileStat.mtimeMs, sessionId };
   } catch {
     return null;
   }
@@ -88,7 +151,6 @@ export async function getRecentLogs(
   let projectDirs: string[] = [];
   try {
     const entries = await readdir(CLAUDE_PROJECTS_DIR);
-    // dirs don't have a dot extension
     projectDirs = entries.filter((e) => !e.includes('.'));
   } catch {
     return { globalFeed: [], byProject: new Map() };
@@ -107,7 +169,7 @@ export async function getRecentLogs(
         return;
       }
 
-      const matched = projectDirMap.get(dirName);
+      const matched = matchProjectDir(dirName, projectDirMap);
 
       await Promise.all(
         files.map(async (f) => {
@@ -117,6 +179,7 @@ export async function getRecentLogs(
           allSessions.push({
             sessionId: session.sessionId,
             title: session.title,
+            description: session.description,
             outputTokens: session.outputTokens,
             mtime: session.mtime,
             projectDirName: dirName,
@@ -132,11 +195,13 @@ export async function getRecentLogs(
 
   const globalFeed = allSessions.slice(0, limit);
 
-  // Most recent major session per project dir
+  // Most recent major session per project, merging worktree and main-checkout sessions
+  // under the same project ID so they don't appear as separate entries.
   const byProject = new Map<string, SessionEntry>();
   for (const s of allSessions) {
-    if (!byProject.has(s.projectDirName)) {
-      byProject.set(s.projectDirName, s);
+    const key = s.projectId ?? s.projectDirName;
+    if (!byProject.has(key)) {
+      byProject.set(key, s);
     }
   }
 

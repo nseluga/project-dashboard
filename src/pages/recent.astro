@@ -3,8 +3,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import { getMergedProjects } from '../lib/merge.js';
 import { getRecentLogs, relativeTime, fmtTokens } from '../lib/recentLogs.js';
 import type { SessionEntry } from '../lib/recentLogs.js';
+import type { MergedProject } from '../types/project.js';
 
-let allProjects = [];
+let allProjects: MergedProject[] = [];
 let loadError = false;
 let globalFeed: SessionEntry[] = [];
 let byProject = new Map<string, SessionEntry>();
@@ -17,17 +18,14 @@ try {
   loadError = true;
 }
 
-// Build per-known-project list (only projects we track, sorted by recency of their last session)
+// Per-project list: one entry per tracked project that has a recent major session.
+// byProject is keyed by projectId (for matched sessions) or projectDirName (unmatched).
 const projectSessions = allProjects
-  .map((p) => {
-    // find matching session by projectId or by scanning byProject entries
-    const entry = [...byProject.values()].find((s) => s.projectId === p.id) ?? null;
-    return { project: p, session: entry };
-  })
-  .filter((x) => x.session !== null)
-  .sort((a, b) => (b.session!.mtime) - (a.session!.mtime));
+  .map((p) => ({ project: p, session: byProject.get(p.id) ?? null }))
+  .filter((x): x is { project: MergedProject; session: SessionEntry } => x.session !== null)
+  .sort((a, b) => b.session.mtime - a.session.mtime);
 
-// Unmatched dirs (work done outside a tracked project)
+// Sessions from dirs not matched to any tracked project (home dir work, etc.)
 const unmatchedSessions = [...byProject.values()]
   .filter((s) => s.projectId === null)
   .sort((a, b) => b.mtime - a.mtime);
@@ -45,7 +43,7 @@ const unmatchedSessions = [...byProject.values()]
           <a href="/tokens" class="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors duration-150">Tokens</a>
         </nav>
       </div>
-      <p class="text-sm text-slate-500 dark:text-slate-500">What you were doing — pulled from Claude Code session logs.</p>
+      <p class="text-sm text-slate-500 dark:text-slate-500">Most recent Claude Code sessions by project — filtered to substantive work (≥20k output tokens). Refreshes on load.</p>
     </header>
 
     {loadError && (
@@ -56,8 +54,8 @@ const unmatchedSessions = [...byProject.values()]
 
     <!-- Global recent feed -->
     <section class="mb-10" aria-labelledby="global-heading">
-      <h2 id="global-heading" class="font-display text-base font-semibold text-slate-700 dark:text-slate-300 mb-3 uppercase tracking-wide text-xs">
-        Most recent sessions
+      <h2 id="global-heading" class="font-display text-xs font-semibold text-slate-500 dark:text-slate-500 mb-3 uppercase tracking-wide">
+        Most recent sessions — across all projects
       </h2>
 
       {globalFeed.length === 0 ? (
@@ -67,8 +65,11 @@ const unmatchedSessions = [...byProject.values()]
           {globalFeed.map((s) => (
             <div class="flex items-start gap-3 rounded-lg px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
               <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium text-slate-900 dark:text-slate-100 leading-snug">{s.title}</p>
-                <p class="text-xs text-slate-500 dark:text-slate-500 mt-0.5">
+                <p class="text-sm font-semibold text-slate-900 dark:text-slate-100 leading-snug">{s.title}</p>
+                {s.description && (
+                  <p class="text-xs text-slate-600 dark:text-slate-400 mt-0.5 leading-snug line-clamp-2">{s.description}</p>
+                )}
+                <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">
                   {s.projectName ?? <span class="italic">general</span>}
                 </p>
               </div>
@@ -86,8 +87,8 @@ const unmatchedSessions = [...byProject.values()]
 
     <!-- Per-project most recent session -->
     <section aria-labelledby="by-project-heading">
-      <h2 id="by-project-heading" class="font-display text-base font-semibold text-slate-700 dark:text-slate-300 mb-3 uppercase tracking-wide text-xs">
-        Per project
+      <h2 id="by-project-heading" class="font-display text-xs font-semibold text-slate-500 dark:text-slate-500 mb-3 uppercase tracking-wide">
+        Last major session per project
       </h2>
 
       {projectSessions.length === 0 && unmatchedSessions.length === 0 ? (
@@ -98,21 +99,27 @@ const unmatchedSessions = [...byProject.values()]
             <div class="rounded-lg px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 border-l-4 border-l-indigo-400 dark:border-l-indigo-600">
               <div class="flex items-center justify-between mb-1">
                 <span class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 truncate">{project.name}</span>
-                <span class="text-xs text-slate-400 dark:text-slate-500 tabular-nums ml-2 shrink-0">{relativeTime(session!.mtime)}</span>
+                <span class="text-xs text-slate-400 dark:text-slate-500 tabular-nums ml-2 shrink-0">{relativeTime(session.mtime)}</span>
               </div>
-              <p class="text-sm text-slate-800 dark:text-slate-200 leading-snug">{session!.title}</p>
+              <p class="text-sm font-medium text-slate-800 dark:text-slate-200 leading-snug">{session.title}</p>
+              {session.description && (
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-snug line-clamp-2">{session.description}</p>
+              )}
             </div>
           ))}
 
-          {unmatchedSessions.map((s) => (
+          {unmatchedSessions.length > 0 && (
             <div class="rounded-lg px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 border-l-4 border-l-slate-300 dark:border-l-slate-600">
               <div class="flex items-center justify-between mb-1">
-                <span class="text-xs font-semibold text-slate-400 dark:text-slate-500 truncate italic">general</span>
-                <span class="text-xs text-slate-400 dark:text-slate-500 tabular-nums ml-2 shrink-0">{relativeTime(s.mtime)}</span>
+                <span class="text-xs font-semibold text-slate-400 dark:text-slate-500 italic">general (no project)</span>
+                <span class="text-xs text-slate-400 dark:text-slate-500 tabular-nums ml-2 shrink-0">{relativeTime(unmatchedSessions[0].mtime)}</span>
               </div>
-              <p class="text-sm text-slate-800 dark:text-slate-200 leading-snug">{s.title}</p>
+              <p class="text-sm font-medium text-slate-800 dark:text-slate-200 leading-snug">{unmatchedSessions[0].title}</p>
+              {unmatchedSessions[0].description && (
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-snug line-clamp-2">{unmatchedSessions[0].description}</p>
+              )}
             </div>
-          ))}
+          )}
         </div>
       )}
     </section>
