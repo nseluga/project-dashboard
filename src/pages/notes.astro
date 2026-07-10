@@ -51,15 +51,17 @@ function daysAgoLabel(created: string): string {
     <div class="max-w-3xl mx-auto px-4 py-8">
       <header class="mb-8">
         <div class="flex items-center justify-between">
-          <h1 class="font-display text-2xl font-bold text-slate-900">Notes</h1>
-          <nav aria-label="Site navigation">
-            <a href="/" class="text-sm text-slate-500 hover:text-slate-700 transition-colors duration-150">Dashboard</a>
+          <h1 class="font-display text-2xl font-bold text-slate-900 dark:text-slate-100">Notes</h1>
+          <nav aria-label="Site navigation" class="flex items-center gap-4">
+            <a href="/" class="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors duration-150">Dashboard</a>
+            <a href="/momentum" class="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors duration-150">Momentum</a>
+            <a href="/tokens" class="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors duration-150">Tokens</a>
           </nav>
         </div>
       </header>
 
       {loadError && (
-        <div class="bg-red-100 text-red-800 p-4 mb-4 rounded">
+        <div class="bg-red-100 dark:bg-red-950/50 text-red-800 dark:text-red-300 p-4 mb-4 rounded">
           Failed to load notes. Check data/manual.json.
         </div>
       )}
@@ -73,13 +75,13 @@ function daysAgoLabel(created: string): string {
             rows="3"
             maxlength="2000"
             placeholder="Type a note… mention a project name to auto-assign it."
-            class="w-full border border-slate-300 rounded px-3 py-2 text-sm text-slate-900 resize-y focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            class="w-full border border-slate-300 dark:border-slate-700 rounded px-3 py-2 text-sm text-slate-900 dark:text-slate-200 bg-slate-50 dark:bg-slate-900 resize-y focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:placeholder:text-slate-600"
           ></textarea>
           <div class="flex items-center gap-3">
             <button
               type="submit"
               id="add-note-btn"
-              class="px-4 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded hover:bg-indigo-700 focus-visible:ring-2 focus-visible:ring-indigo-500 focus:outline-none disabled:opacity-50 transition-colors duration-150"
+              class="px-4 py-1.5 bg-indigo-600 dark:bg-indigo-700 text-slate-100 text-sm font-medium rounded hover:bg-indigo-700 dark:hover:bg-indigo-600 focus-visible:ring-2 focus-visible:ring-indigo-500 focus:outline-none disabled:opacity-50 transition-colors duration-150"
             >
               Add note
             </button>
@@ -89,7 +91,7 @@ function daysAgoLabel(created: string): string {
       </section>
 
       {notes.length === 0 && !loadError && (
-        <p class="text-sm text-slate-400 italic">No notes yet.</p>
+        <p class="text-sm text-slate-400 dark:text-slate-600 italic">No notes yet.</p>
       )}
 
       {notes.length > 0 && (
@@ -97,17 +99,17 @@ function daysAgoLabel(created: string): string {
           {/* Unsorted / New Ideas section — always at top */}
           {unsorted.length > 0 && (
             <section aria-labelledby="section-unsorted">
-              <h2 id="section-unsorted" class="font-display text-base font-semibold text-slate-700 mb-3">
+              <h2 id="section-unsorted" class="font-display text-base font-semibold text-slate-700 dark:text-slate-300 mb-3">
                 Unsorted / New Ideas
               </h2>
               <ul class="flex flex-col gap-3">
                 {unsorted.map((note) => (
-                  <li class="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col gap-2 shadow-sm">
-                    <p class="text-sm text-slate-900 whitespace-pre-wrap">{note.text}</p>
+                  <li class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex flex-col gap-2 shadow-sm">
+                    <p class="text-sm text-slate-900 dark:text-slate-200 whitespace-pre-wrap">{note.text}</p>
                     <div class="flex items-center gap-3 flex-wrap">
-                      <span class="text-xs text-slate-400">{daysAgoLabel(note.created)}</span>
+                      <span class="text-xs text-slate-400 dark:text-slate-600">{daysAgoLabel(note.created)}</span>
                       <select
-                        class="note-reassign text-xs border border-slate-300 rounded px-2 py-0.5 text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                        class="note-reassign text-xs border border-slate-300 dark:border-slate-700 rounded px-2 py-0.5 text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                         data-note-id={note.id}
                         data-current={note.projectId ?? ''}
                       >
@@ -119,7 +121,7 @@ function daysAgoLabel(created: string): string {
                         ))}
                       </select>
                       <button
-                        class="note-delete text-xs text-red-500 hover:text-red-700 transition-colors duration-150 ml-auto focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 rounded"
+                        class="note-delete text-xs text-red-500 dark:text-red-500 hover:text-red-700 dark:hover:text-red-400 transition-colors duration-150 ml-auto focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 rounded"
                         data-note-id={note.id}
                         aria-label="Delete note"
                       >
@@ -137,17 +139,17 @@ function daysAgoLabel(created: string): string {
             const projectNotes = byProject.get(project.id)!;
             return (
               <section aria-labelledby={`section-${project.id}`}>
-                <h2 id={`section-${project.id}`} class="font-display text-base font-semibold text-slate-700 mb-3">
+                <h2 id={`section-${project.id}`} class="font-display text-base font-semibold text-slate-700 dark:text-slate-300 mb-3">
                   {project.name}
                 </h2>
                 <ul class="flex flex-col gap-3">
                   {projectNotes.map((note) => (
-                    <li class="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col gap-2 shadow-sm">
-                      <p class="text-sm text-slate-900 whitespace-pre-wrap">{note.text}</p>
+                    <li class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex flex-col gap-2 shadow-sm">
+                      <p class="text-sm text-slate-900 dark:text-slate-200 whitespace-pre-wrap">{note.text}</p>
                       <div class="flex items-center gap-3 flex-wrap">
-                        <span class="text-xs text-slate-400">{daysAgoLabel(note.created)}</span>
+                        <span class="text-xs text-slate-400 dark:text-slate-600">{daysAgoLabel(note.created)}</span>
                         <select
-                          class="note-reassign text-xs border border-slate-300 rounded px-2 py-0.5 text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                          class="note-reassign text-xs border border-slate-300 dark:border-slate-700 rounded px-2 py-0.5 text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                           data-note-id={note.id}
                           data-current={note.projectId ?? ''}
                         >
@@ -159,7 +161,7 @@ function daysAgoLabel(created: string): string {
                           ))}
                         </select>
                         <button
-                          class="note-delete text-xs text-red-500 hover:text-red-700 transition-colors duration-150 ml-auto focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 rounded"
+                          class="note-delete text-xs text-red-500 dark:text-red-500 hover:text-red-700 dark:hover:text-red-400 transition-colors duration-150 ml-auto focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 rounded"
                           data-note-id={note.id}
                           aria-label="Delete note"
                         >

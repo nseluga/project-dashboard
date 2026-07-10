@@ -4,11 +4,11 @@
 > the per-item `status` fields in plan.md) whenever an item is completed, so a fresh session
 > can tell what's done without re-auditing the codebase.
 
-**Last verified against code:** 2026-07-08
+**Last verified against code:** 2026-07-09
 
 ## Where we're at (one paragraph)
 
-**v1 is shipped.** All stages 0–4 are complete. The Astro SSR project is scaffolded, data layer solid (projects.ts, manual.ts, merge.ts), all API routes hardened, the project board with edit controls is live, weekly digest is built, and README is written. Next phase is v1.5 UX improvements (collapsible edit controls, per-project field hide toggles) followed by v2 features (momentum view, what-to-work-on-next recommendation, Claude token tracking, inbox removal).
+**v2 is shipped.** All stages 0–7 are complete. Dashboard now has: collapsible edit controls (5.1), per-project field hide toggles (5.2), inbox removed (6.1), momentum view with git activity bars (6.2), "What to work on next" recommendation card (6.3), Claude token tracking (6.4), smart notepad with auto-categorization (6.5), and a full visual design pass — slate palette, indigo accent, Inter+Plus Jakarta Sans fonts, emerald status badges, left-border card accents, WCAG-compliant focus rings (7.1). Branch feat/stage5-6 merged into main. No further plan items remain.
 
 ## Status by stage
 

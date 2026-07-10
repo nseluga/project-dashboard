@@ -9,17 +9,17 @@ interface Props {
 const { project } = Astro.props;
 
 const statusColors: Record<string, string> = {
-  active: 'bg-emerald-100 text-emerald-700',
-  'in-progress': 'bg-blue-100 text-blue-700',
-  'on-hold': 'bg-amber-100 text-amber-700',
-  complete: 'bg-slate-100 text-slate-500',
-  archived: 'bg-slate-100 text-slate-500',
+  active: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300',
+  'in-progress': 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300',
+  'on-hold': 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300',
+  complete: 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400',
+  archived: 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400',
 };
 
 const priorityColors: Record<string, string> = {
-  high: 'bg-red-100 text-red-700',
-  medium: 'bg-amber-100 text-amber-700',
-  low: 'bg-slate-100 text-slate-500',
+  high: 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300',
+  medium: 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300',
+  low: 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400',
 };
 
 const statusClass = statusColors[project.status] ?? 'bg-slate-100 text-slate-500';
@@ -27,16 +27,16 @@ const priorityClass = project.priority ? (priorityColors[project.priority] ?? 'b
 
 // Left-border accent by status (overdue overrides all)
 const statusBorderAccent: Record<string, string> = {
-  active: 'border-l-4 border-emerald-500',
-  'in-progress': 'border-l-4 border-blue-500',
-  'on-hold': 'border-l-4 border-amber-500',
-  complete: 'border-l-4 border-slate-300',
-  archived: 'border-l-4 border-slate-300',
+  active: 'border-l-4 border-emerald-500 dark:border-emerald-400',
+  'in-progress': 'border-l-4 border-blue-500 dark:border-blue-400',
+  'on-hold': 'border-l-4 border-amber-500 dark:border-amber-400',
+  complete: 'border-l-4 border-slate-300 dark:border-slate-600',
+  archived: 'border-l-4 border-slate-300 dark:border-slate-600',
 };
 
 const cardBorder = project.overdue
-  ? 'border-2 border-red-400 bg-red-50'
-  : `border border-slate-200 bg-slate-50 ${statusBorderAccent[project.status] ?? 'border-l-4 border-slate-300'}`;
+  ? 'border-2 border-red-400 bg-red-50 dark:bg-red-950/40 dark:border-red-700'
+  : `border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 ${statusBorderAccent[project.status] ?? 'border-l-4 border-slate-300 dark:border-slate-600'}`;
 
 const safeGithub =
   project.github?.startsWith('http://') || project.github?.startsWith('https://')
@@ -47,7 +47,7 @@ const safeGithub =
 <article class={`rounded-xl p-4 shadow-sm flex flex-col gap-3 ${cardBorder}`}>
   <!-- Header row: name + badges -->
   <div class="flex flex-wrap items-center gap-2">
-    <h3 class="font-display text-base font-semibold text-slate-900 mr-1" aria-label={project.name}>{project.name}</h3>
+    <h3 class="font-display text-base font-semibold text-slate-900 dark:text-slate-100 mr-1" aria-label={project.name}>{project.name}</h3>
     <span class={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusClass}`}>
       {project.status}
     </span>
@@ -57,22 +57,22 @@ const safeGithub =
       </span>
     )}
     {project.overdue && (
-      <span class="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-red-200 text-red-800">
+      <span class="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-red-200 text-red-800 dark:bg-red-800/60 dark:text-red-300">
         overdue
       </span>
     )}
   </div>
 
   <!-- Days since active -->
-  <p class="text-sm text-slate-500">
-    Last active: <span class="font-medium text-slate-700">{project.days_since_active} days ago</span>
+  <p class="text-sm text-slate-500 dark:text-slate-400">
+    Last active: <span class="font-medium text-slate-700 dark:text-slate-300">{project.days_since_active} days ago</span>
   </p>
 
   <!-- Next step -->
   {project.next_step && (
     <div>
-      <span class="text-xs font-semibold uppercase tracking-wide text-slate-400">Next step</span>
-      <p class="text-sm text-slate-800 mt-0.5">{project.next_step}</p>
+      <span class="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Next step</span>
+      <p class="text-sm text-slate-800 dark:text-slate-200 mt-0.5">{project.next_step}</p>
     </div>
   )}
 
@@ -80,25 +80,25 @@ const safeGithub =
   <div class="flex flex-col gap-1 text-sm">
     {project.repo && (
       <div>
-        <span class="text-xs font-semibold uppercase tracking-wide text-slate-400">Repo</span>
-        <p class="font-mono text-slate-700 text-xs mt-0.5">{project.repo}</p>
+        <span class="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Repo</span>
+        <p class="font-mono text-slate-700 dark:text-slate-300 text-xs mt-0.5">{project.repo}</p>
       </div>
     )}
     {project.github && (
       <div>
-        <span class="text-xs font-semibold uppercase tracking-wide text-slate-400">GitHub</span>
+        <span class="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">GitHub</span>
         {safeGithub ? (
           <a
             href={safeGithub}
             target="_blank"
             rel="noopener noreferrer"
             aria-label={`${project.name} on GitHub (opens in new tab)`}
-            class="text-indigo-600 hover:text-indigo-800 underline text-xs mt-0.5 inline-block transition-colors duration-150"
+            class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 underline text-xs mt-0.5 inline-block transition-colors duration-150"
           >
             {safeGithub}
           </a>
         ) : (
-          <p class="text-xs text-slate-500 mt-0.5">{project.github}</p>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{project.github}</p>
         )}
       </div>
     )}
@@ -106,19 +106,19 @@ const safeGithub =
 
   <!-- Due date (if set) -->
   {project.due_date && (
-    <p class={`text-xs font-medium ${project.overdue ? 'text-red-700' : 'text-slate-500'}`}>
+    <p class={`text-xs font-medium ${project.overdue ? 'text-red-700 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>
       Due: {project.due_date}
     </p>
   )}
 
   <!-- Token usage (if any logged) -->
   {project.total_tokens > 0 && (
-    <p class="text-xs font-medium text-slate-500">Tokens: {project.total_tokens.toLocaleString()}</p>
+    <p class="text-xs font-medium text-slate-500 dark:text-slate-400">Tokens: {project.total_tokens.toLocaleString()}</p>
   )}
 
   <!-- Inline edit controls (collapsed by default) -->
   <details class="mt-1">
-    <summary class="cursor-pointer text-xs font-medium text-slate-400 hover:text-indigo-600 transition-colors duration-150 select-none list-none">Edit</summary>
+    <summary class="cursor-pointer text-xs font-medium text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-150 select-none list-none">Edit</summary>
     <EditControls project={project} />
   </details>
 </article>

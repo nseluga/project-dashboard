@@ -28,16 +28,16 @@ const projectNameById = Object.fromEntries(projects.map((p) => [p.id, p.name]));
 ---
 
 <section class="mt-10" aria-labelledby="token-tracker-heading">
-  <h2 id="token-tracker-heading" class="font-display text-lg font-semibold text-slate-800 mb-4">Token Tracker</h2>
+  <h2 id="token-tracker-heading" class="font-display text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">Token Tracker</h2>
 
   <!-- Log form -->
   <form id="token-log-form" class="flex flex-wrap gap-3 items-end mb-6">
     <div class="flex flex-col gap-1">
-      <label for="token-project-select" class="text-xs font-semibold uppercase tracking-wide text-slate-400">Project</label>
+      <label for="token-project-select" class="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Project</label>
       <select
         id="token-project-select"
         name="projectId"
-        class="rounded border border-slate-300 px-2 py-1.5 text-sm text-slate-800 bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+        class="rounded border border-slate-300 dark:border-slate-700 px-2 py-1.5 text-sm text-slate-800 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
         required
       >
         <option value="">— select project —</option>
@@ -48,27 +48,27 @@ const projectNameById = Object.fromEntries(projects.map((p) => [p.id, p.name]));
     </div>
 
     <div class="flex flex-col gap-1">
-      <label for="token-count-input" class="text-xs font-semibold uppercase tracking-wide text-slate-400">Tokens</label>
+      <label for="token-count-input" class="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Tokens</label>
       <input
         id="token-count-input"
         name="tokens"
         type="number"
         min="1"
         placeholder="e.g. 5000"
-        class="rounded border border-slate-300 px-2 py-1.5 text-sm text-slate-800 w-32 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+        class="rounded border border-slate-300 dark:border-slate-700 px-2 py-1.5 text-sm text-slate-800 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 w-32 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
         required
       />
     </div>
 
     <div class="flex flex-col gap-1">
-      <label for="token-note-input" class="text-xs font-semibold uppercase tracking-wide text-slate-400">Note (optional)</label>
+      <label for="token-note-input" class="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Note (optional)</label>
       <input
         id="token-note-input"
         name="note"
         type="text"
         maxlength="200"
         placeholder="e.g. planning session"
-        class="rounded border border-slate-300 px-2 py-1.5 text-sm text-slate-800 w-48 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+        class="rounded border border-slate-300 dark:border-slate-700 px-2 py-1.5 text-sm text-slate-800 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 w-48 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
       />
     </div>
 
@@ -84,30 +84,30 @@ const projectNameById = Object.fromEntries(projects.map((p) => [p.id, p.name]));
 
   <!-- Entry table -->
   {entries.length === 0 ? (
-    <p class="text-sm text-slate-400 italic">No token logs yet.</p>
+    <p class="text-sm text-slate-400 dark:text-slate-600 italic">No token logs yet.</p>
   ) : (
     <div class="overflow-x-auto">
       <table class="w-full text-sm border-collapse">
         <thead>
-          <tr class="border-b border-slate-200">
-            <th class="text-left py-2 pr-4 text-xs font-semibold uppercase tracking-wide text-slate-400">Project</th>
-            <th class="text-right py-2 pr-4 text-xs font-semibold uppercase tracking-wide text-slate-400">Tokens</th>
-            <th class="text-left py-2 pr-4 text-xs font-semibold uppercase tracking-wide text-slate-400">Note</th>
-            <th class="text-left py-2 pr-4 text-xs font-semibold uppercase tracking-wide text-slate-400">When</th>
-            <th class="py-2 text-xs font-semibold uppercase tracking-wide text-slate-400"></th>
+          <tr class="border-b border-slate-200 dark:border-slate-800">
+            <th class="text-left py-2 pr-4 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Project</th>
+            <th class="text-right py-2 pr-4 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Tokens</th>
+            <th class="text-left py-2 pr-4 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Note</th>
+            <th class="text-left py-2 pr-4 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">When</th>
+            <th class="py-2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500"></th>
           </tr>
         </thead>
         <tbody>
           {entries.map((entry) => (
-            <tr class="border-b border-slate-100 hover:bg-slate-50">
-              <td class="py-2 pr-4 text-slate-800 font-medium">{projectNameById[entry.projectId] ?? entry.projectId}</td>
-              <td class="py-2 pr-4 text-slate-700 text-right font-mono">{entry.tokens.toLocaleString()}</td>
-              <td class="py-2 pr-4 text-slate-500">{entry.note ?? '—'}</td>
-              <td class="py-2 pr-4 text-slate-400 whitespace-nowrap">{formatDate(entry.created, todayStr)}</td>
+            <tr class="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60">
+              <td class="py-2 pr-4 text-slate-800 dark:text-slate-300 font-medium">{projectNameById[entry.projectId] ?? entry.projectId}</td>
+              <td class="py-2 pr-4 text-slate-700 dark:text-slate-400 text-right font-mono">{entry.tokens.toLocaleString()}</td>
+              <td class="py-2 pr-4 text-slate-500 dark:text-slate-500">{entry.note ?? '—'}</td>
+              <td class="py-2 pr-4 text-slate-400 dark:text-slate-600 whitespace-nowrap">{formatDate(entry.created, todayStr)}</td>
               <td class="py-2">
                 <button
                   type="button"
-                  class="token-delete-btn text-slate-500 hover:text-red-500 focus:outline-none focus-visible:ring-1 focus-visible:ring-red-400 rounded px-1 transition-colors duration-150"
+                  class="token-delete-btn text-slate-500 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 focus:outline-none focus-visible:ring-1 focus-visible:ring-red-400 rounded px-1 transition-colors duration-150"
                   data-entry-id={entry.id}
                   aria-label={`Delete token log entry for ${projectNameById[entry.projectId] ?? entry.projectId}`}
                 >

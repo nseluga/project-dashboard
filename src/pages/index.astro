@@ -58,17 +58,18 @@ const recommendation = getRecommendation(allProjects, todayStr);
     <div class="max-w-5xl mx-auto px-4 py-8">
       <header class="mb-8">
         <div class="flex items-center justify-between">
-          <h1 class="font-display text-2xl font-bold text-slate-900">Project Dashboard</h1>
+          <h1 class="font-display text-2xl font-bold text-slate-900 dark:text-slate-100">Project Dashboard</h1>
           <nav aria-label="Site navigation" class="flex items-center gap-4">
-            <a href="/momentum" class="text-sm text-slate-500 hover:text-slate-700 transition-colors duration-150">Momentum</a>
-            <a href="/notes" class="text-sm text-slate-500 hover:text-slate-700 transition-colors duration-150">Notes</a>
+            <a href="/momentum" class="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors duration-150">Momentum</a>
+            <a href="/notes" class="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors duration-150">Notes</a>
+            <a href="/tokens" class="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors duration-150">Tokens</a>
           </nav>
         </div>
-        <p class="text-sm text-slate-500 mt-1">What am I working on, where does it stand, and what's due when.</p>
+        <p class="text-sm text-slate-500 dark:text-slate-500 mt-1">What am I working on, where does it stand, and what's due when.</p>
       </header>
 
       {loadError && (
-        <div class="bg-red-100 text-red-800 p-4 mb-4 rounded">
+        <div class="bg-red-100 dark:bg-red-950/50 text-red-800 dark:text-red-300 p-4 mb-4 rounded">
           Failed to load projects. Check OS_PROJECTS_DIR and data/manual.json.
         </div>
       )}
@@ -77,9 +78,9 @@ const recommendation = getRecommendation(allProjects, todayStr);
 
       <WeeklyDigest projects={allProjects} />
 
-      <div class="border-t border-slate-200 my-6" role="separator" aria-hidden="true"></div>
+      <div class="border-t border-slate-200 dark:border-slate-800 my-6" role="separator" aria-hidden="true"></div>
 
-      <main class="flex flex-col gap-10 bg-slate-100 rounded-xl p-6">
+      <main class="flex flex-col gap-10 bg-slate-100 dark:bg-slate-900/60 rounded-xl p-6">
         {BOARD_STATUSES.map((status) => {
           const projects = buckets[status];
           return (
@@ -87,17 +88,17 @@ const recommendation = getRecommendation(allProjects, todayStr);
               <div class="flex items-center gap-3 mb-4">
                 <h2
                   id={`section-${status}`}
-                  class="font-display text-lg font-bold text-slate-800"
+                  class="font-display text-lg font-bold text-slate-800 dark:text-slate-200"
                 >
                   {sectionLabels[status]}
                 </h2>
-                <span class="text-sm text-slate-500 font-normal">
+                <span class="text-sm text-slate-500 dark:text-slate-500 font-normal">
                   ({projects.length})
                 </span>
               </div>
 
               {projects.length === 0 ? (
-                <p class="text-sm text-slate-400 italic">No projects.</p>
+                <p class="text-sm text-slate-400 dark:text-slate-600 italic">No projects.</p>
               ) : (
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {projects.map((project) => (
@@ -112,7 +113,7 @@ const recommendation = getRecommendation(allProjects, todayStr);
 
       {completedProjects.length > 0 && (
         <details class="mt-10">
-          <summary class="cursor-pointer text-sm font-medium text-slate-500 hover:text-slate-700 transition-colors duration-150 select-none">
+          <summary class="cursor-pointer text-sm font-medium text-slate-500 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors duration-150 select-none">
             Completed ({completedProjects.length})
           </summary>
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 mt-4">

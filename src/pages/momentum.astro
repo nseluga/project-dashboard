@@ -49,19 +49,18 @@ const momentumData: MomentumEntry[] = await Promise.all(
     <div class="max-w-5xl mx-auto px-4 py-8">
       <header class="mb-8">
         <div class="flex items-center gap-4 mb-1">
-          <h1 class="font-display text-2xl font-bold text-slate-900">Momentum</h1>
-          <nav aria-label="Site navigation">
-            <a
-              href="/"
-              class="text-sm text-slate-500 hover:text-slate-700 transition-colors duration-150"
-            >← Dashboard</a>
+          <h1 class="font-display text-2xl font-bold text-slate-900 dark:text-slate-100">Momentum</h1>
+          <nav aria-label="Site navigation" class="flex items-center gap-4">
+            <a href="/" class="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors duration-150">← Dashboard</a>
+            <a href="/notes" class="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors duration-150">Notes</a>
+            <a href="/tokens" class="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors duration-150">Tokens</a>
           </nav>
         </div>
-        <p class="text-sm text-slate-500">Git activity across projects for the selected window.</p>
+        <p class="text-sm text-slate-500 dark:text-slate-500">Git activity across projects for the selected window.</p>
       </header>
 
       {loadError && (
-        <div class="bg-red-100 text-red-800 p-4 mb-4 rounded">
+        <div class="bg-red-100 dark:bg-red-950/50 text-red-800 dark:text-red-300 p-4 mb-4 rounded">
           Failed to load projects. Check OS_PROJECTS_DIR and data/manual.json.
         </div>
       )}
