@@ -22,7 +22,7 @@
 ## STAGE 5 — v1.5 UX improvements
 
 ### 5.1 — Collapsible edit controls (read-only default)
-- **status:** todo
+- **status:** done
 - **track:** full
 - **owns_files:** `src/components/ProjectCard.astro`, `src/components/EditControls.astro`
 - **blocked_by:** 4.2
@@ -31,7 +31,7 @@
 - **done when:** visiting the dashboard shows all cards with edit controls hidden by default; clicking "Edit" on any card expands its controls; all existing edit functionality (due date, status override, priority) still works correctly after expand; no regressions in any other card behavior; no console errors.
 
 ### 5.2 — Per-project hide toggles for due date + priority fields
-- **status:** todo
+- **status:** done
 - **track:** full
 - **owns_files:** `src/pages/api/field-visibility.ts` (new), `src/lib/manual.ts` (extend), `src/types/manual.ts` (extend), `src/lib/merge.ts` (extend), `src/types/project.ts` (extend MergedProject), `src/components/EditControls.astro` (extend)
 - **blocked_by:** 5.1
@@ -48,7 +48,7 @@
 ## STAGE 6 — v2 features
 
 ### 6.1 — Remove inbox
-- **status:** todo
+- **status:** done
 - **track:** light
 - **owns_files:** `src/components/Inbox.astro` (delete), `src/pages/api/inbox.ts` (delete), `src/pages/index.astro` (remove import + usage), `src/types/manual.ts` (keep InboxItem for compat), `src/lib/manual.ts` (keep inbox field for compat)
 - **blocked_by:** 4.2
@@ -57,7 +57,7 @@
 - **done when:** the page renders with no inbox UI; `GET /api/inbox` and `POST /api/inbox` return 404 (routes deleted); no TypeScript errors; no broken imports; existing `manual.json` with inbox data still parses without errors; test suite passes.
 
 ### 6.2 — Momentum view: project activity timeline
-- **status:** todo
+- **status:** done
 - **track:** full
 - **owns_files:** `src/pages/momentum.astro` (new page), `src/lib/git.ts` (new), `src/components/MomentumView.astro` (new)
 - **blocked_by:** 6.1
@@ -73,7 +73,7 @@
 - **done when:** `/momentum` renders all projects; the scope selector changes the window and highlights the active choice; projects with git repos show activity bars with commit dots; projects without repos show the placeholder; stalled projects have amber badge; moving projects have green badge; page loads without errors; tests cover `getCommitDates()` (happy path + error path).
 
 ### 6.3 — "What to work on next" recommendation
-- **status:** todo
+- **status:** done
 - **track:** full
 - **owns_files:** `src/lib/recommend.ts` (new), `src/components/NextUp.astro` (new), `src/pages/index.astro` (add NextUp above weekly digest)
 - **blocked_by:** 6.1
@@ -90,7 +90,7 @@
 - **done when:** `getRecommendation()` returns the correct project for representative test cases (overdue wins, tie-breaking works, complete/archived excluded, null when all projects are complete); the `NextUp` component renders on the page with the correct project; an empty/all-complete projects set renders nothing; unit tests cover the scoring and tie-breaking logic.
 
 ### 6.4 — Claude token tracking (manual capture)
-- **status:** todo
+- **status:** done
 - **track:** full
 - **owns_files:** `src/pages/api/token-log.ts` (new), `src/components/TokenTracker.astro` (new), `src/lib/manual.ts` (extend), `src/types/manual.ts` (extend), `src/pages/index.astro` (add TokenTracker at bottom)
 - **blocked_by:** 6.3
@@ -109,7 +109,7 @@
 - **done when:** logging a token entry persists and appears in the table; deleting removes it; a project card with logged tokens shows the total; the token count in the project card updates correctly after logging and deleting; invalid input (non-numeric tokens, zero/negative tokens, missing projectId) returns 400; empty state renders correctly; tests cover the API routes and the `total_tokens` merge computation.
 
 ### 6.5 — Smart notepad with auto-categorization
-- **status:** todo
+- **status:** done
 - **track:** full
 - **owns_files:** `src/pages/notes.astro` (new page), `src/pages/api/note.ts` (new), `src/lib/manual.ts` (extend), `src/types/manual.ts` (extend), `src/lib/autoTag.ts` (new), `src/pages/index.astro` (add nav link)
 - **blocked_by:** 6.4
@@ -135,7 +135,7 @@
 ## STAGE 7 — Visual design pass
 
 ### 7.1 — Typography, color, and visual polish
-- **status:** todo
+- **status:** done
 - **track:** full
 - **owns_files:** `src/components/*.astro`, `src/pages/index.astro`, `src/pages/momentum.astro`, `src/pages/notes.astro`, `tailwind.config.cjs` (extend theme), `src/layouts/` (add a base layout if not present)
 - **blocked_by:** 6.5
