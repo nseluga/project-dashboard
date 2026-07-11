@@ -21,3 +21,8 @@ npm-debug.log*
 
 # local dashboard data — user-local, do not commit
 data/manual.json
+
+# Personal planning/progress/spec — local only, never on GitHub
+/PLAN.md
+/PROGRESS.md
+/SPEC.md
