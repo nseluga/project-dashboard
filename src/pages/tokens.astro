@@ -28,17 +28,21 @@ function fmtDate(iso: string | null): string {
 
 const rows = projects
   .map((p) => ({ project: p, usage: usageMap.get(p.id) ?? null }))
-  .filter(({ usage }) => usage !== null && usage.sessionCount > 0)
   .sort((a, b) => {
-    const aTotal = (a.usage!.inputTokens + a.usage!.outputTokens);
-    const bTotal = (b.usage!.inputTokens + b.usage!.outputTokens);
+    const aHasUsage = a.usage && a.usage.sessionCount > 0;
+    const bHasUsage = b.usage && b.usage.sessionCount > 0;
+    if (aHasUsage && !bHasUsage) return -1;
+    if (!aHasUsage && bHasUsage) return 1;
+    const aTotal = (a.usage?.inputTokens ?? 0) + (a.usage?.outputTokens ?? 0);
+    const bTotal = (b.usage?.inputTokens ?? 0) + (b.usage?.outputTokens ?? 0);
     return bTotal - aTotal;
   });
 
-const grandInput = rows.reduce((s, r) => s + r.usage!.inputTokens, 0);
-const grandOutput = rows.reduce((s, r) => s + r.usage!.outputTokens, 0);
-const grandCache = rows.reduce((s, r) => s + r.usage!.cacheCreationTokens + r.usage!.cacheReadTokens, 0);
-const grandSessions = rows.reduce((s, r) => s + r.usage!.sessionCount, 0);
+const rowsWithUsage = rows.filter((r) => r.usage && r.usage.sessionCount > 0);
+const grandInput = rowsWithUsage.reduce((s, r) => s + r.usage!.inputTokens, 0);
+const grandOutput = rowsWithUsage.reduce((s, r) => s + r.usage!.outputTokens, 0);
+const grandCache = rowsWithUsage.reduce((s, r) => s + r.usage!.cacheCreationTokens + r.usage!.cacheReadTokens, 0);
+const grandSessions = rowsWithUsage.reduce((s, r) => s + r.usage!.sessionCount, 0);
 const grandTotal = grandInput + grandOutput;
 
 function pct(usage: ProjectUsage): string {
@@ -73,11 +77,11 @@ function pctNum(usage: ProjectUsage): number {
       </div>
     )}
 
-    {rows.length === 0 && !loadError && (
-      <p class="text-slate-500 dark:text-slate-500 text-sm">No Claude Code sessions found for any tracked project.</p>
+    {projects.length === 0 && !loadError && (
+      <p class="text-slate-500 dark:text-slate-500 text-sm">No projects found.</p>
     )}
 
-    {rows.length > 0 && (
+    {projects.length > 0 && (
       <div class="bg-slate-50 dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
         <table class="w-full text-sm">
           <thead>
@@ -93,35 +97,41 @@ function pctNum(usage: ProjectUsage): number {
           </thead>
           <tbody>
             {rows.map(({ project, usage }) => (
-              <tr class="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors">
+              <tr class={`border-b ${usage ? 'border-slate-100 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800/60' : 'border-slate-100 dark:border-slate-800/50'} transition-colors ${!usage ? 'opacity-60' : ''}`}>
                 <td class="px-4 py-3 font-medium text-slate-900 dark:text-slate-200">{project.name}</td>
-                <td class="px-4 py-3 text-right text-slate-600 dark:text-slate-400 tabular-nums">{usage!.sessionCount}</td>
-                <td class="px-4 py-3 text-right text-slate-700 dark:text-slate-300 tabular-nums">{fmt(usage!.inputTokens)}</td>
-                <td class="px-4 py-3 text-right text-slate-700 dark:text-slate-300 tabular-nums">{fmt(usage!.outputTokens)}</td>
-                <td class="px-4 py-3 text-right text-slate-500 dark:text-slate-500 tabular-nums">{fmt(usage!.cacheCreationTokens + usage!.cacheReadTokens)}</td>
+                <td class="px-4 py-3 text-right text-slate-600 dark:text-slate-400 tabular-nums">{usage?.sessionCount ?? '—'}</td>
+                <td class="px-4 py-3 text-right text-slate-700 dark:text-slate-300 tabular-nums">{usage ? fmt(usage.inputTokens) : '—'}</td>
+                <td class="px-4 py-3 text-right text-slate-700 dark:text-slate-300 tabular-nums">{usage ? fmt(usage.outputTokens) : '—'}</td>
+                <td class="px-4 py-3 text-right text-slate-500 dark:text-slate-500 tabular-nums">{usage ? fmt(usage.cacheCreationTokens + usage.cacheReadTokens) : '—'}</td>
                 <td class="px-4 py-3 text-right">
-                  <div class="flex flex-col items-end gap-1">
-                    <span class="text-indigo-600 dark:text-indigo-400 font-semibold tabular-nums text-xs">{pct(usage!)}</span>
-                    <div class="w-16 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                      <div class="h-full bg-indigo-400 dark:bg-indigo-500 rounded-full" style={`width: ${pctNum(usage!).toFixed(1)}%`}></div>
+                  {usage ? (
+                    <div class="flex flex-col items-end gap-1">
+                      <span class="text-indigo-600 dark:text-indigo-400 font-semibold tabular-nums text-xs">{pct(usage)}</span>
+                      <div class="w-16 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                        <div class="h-full bg-indigo-400 dark:bg-indigo-500 rounded-full" style={`width: ${pctNum(usage).toFixed(1)}%`}></div>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <span class="text-slate-400 dark:text-slate-500">—</span>
+                  )}
                 </td>
-                <td class="px-4 py-3 text-right text-slate-500 dark:text-slate-500">{fmtDate(usage!.lastSessionDate)}</td>
+                <td class="px-4 py-3 text-right text-slate-500 dark:text-slate-500">{usage ? fmtDate(usage.lastSessionDate) : '—'}</td>
               </tr>
             ))}
           </tbody>
-          <tfoot>
-            <tr class="bg-slate-100 dark:bg-slate-950/60 border-t border-slate-200 dark:border-slate-800 font-semibold">
-              <td class="px-4 py-3 text-slate-700 dark:text-slate-300">Total</td>
-              <td class="px-4 py-3 text-right text-slate-700 dark:text-slate-300 tabular-nums">{grandSessions}</td>
-              <td class="px-4 py-3 text-right text-slate-700 dark:text-slate-300 tabular-nums">{fmt(grandInput)}</td>
-              <td class="px-4 py-3 text-right text-slate-700 dark:text-slate-300 tabular-nums">{fmt(grandOutput)}</td>
-              <td class="px-4 py-3 text-right text-slate-700 dark:text-slate-300 tabular-nums">{fmt(grandCache)}</td>
-              <td class="px-4 py-3 text-right text-indigo-600 dark:text-indigo-400 font-semibold text-xs">100%</td>
-              <td class="px-4 py-3"></td>
-            </tr>
-          </tfoot>
+          {rowsWithUsage.length > 0 && (
+            <tfoot>
+              <tr class="bg-slate-100 dark:bg-slate-950/60 border-t border-slate-200 dark:border-slate-800 font-semibold">
+                <td class="px-4 py-3 text-slate-700 dark:text-slate-300">Total</td>
+                <td class="px-4 py-3 text-right text-slate-700 dark:text-slate-300 tabular-nums">{grandSessions}</td>
+                <td class="px-4 py-3 text-right text-slate-700 dark:text-slate-300 tabular-nums">{fmt(grandInput)}</td>
+                <td class="px-4 py-3 text-right text-slate-700 dark:text-slate-300 tabular-nums">{fmt(grandOutput)}</td>
+                <td class="px-4 py-3 text-right text-slate-700 dark:text-slate-300 tabular-nums">{fmt(grandCache)}</td>
+                <td class="px-4 py-3 text-right text-indigo-600 dark:text-indigo-400 font-semibold text-xs">100%</td>
+                <td class="px-4 py-3"></td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
     )}
