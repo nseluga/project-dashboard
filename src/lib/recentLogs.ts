@@ -2,8 +2,10 @@ import { readdir, readFile, stat } from 'fs/promises';
 import { homedir } from 'os';
 import { join } from 'path';
 import type { MergedProject } from '../types/project.js';
+import { buildRepoPathMap, inferProjectFromContent } from './claudeUsage.js';
 
 const CLAUDE_PROJECTS_DIR = join(homedir(), '.claude', 'projects');
+const HOME_DIR_KEY = homedir().replace(/\//g, '-');
 
 // Minimum output tokens to qualify as a "major" session worth surfacing.
 // Filters out quick one-off questions, memory updates, and trivial commands.
@@ -97,12 +99,16 @@ function extractFirstUserMessage(lines: string[]): string | null {
   return null;
 }
 
-async function parseSession(filePath: string): Promise<{
+async function parseSession(
+  filePath: string,
+  repoPathMap?: Map<string, string>,
+): Promise<{
   title: string | null;
   description: string | null;
   outputTokens: number;
   mtime: number;
   sessionId: string;
+  inferredProjectId?: string | null;
 } | null> {
   try {
     const [fileStat, content] = await Promise.all([
@@ -131,7 +137,8 @@ async function parseSession(filePath: string): Promise<{
 
     const description = extractFirstUserMessage(lines);
     const sessionId = filePath.split('/').pop()!.replace('.jsonl', '');
-    return { title, description, outputTokens, mtime: fileStat.mtimeMs, sessionId };
+    const inferredProjectId = repoPathMap ? inferProjectFromContent(content, repoPathMap) : undefined;
+    return { title, description, outputTokens, mtime: fileStat.mtimeMs, sessionId, inferredProjectId };
   } catch {
     return null;
   }
@@ -147,6 +154,10 @@ export async function getRecentLogs(
   { limit = 7, minTokens = MAJOR_SESSION_MIN_TOKENS }: { limit?: number; minTokens?: number } = {},
 ): Promise<RecentLogsResult> {
   const projectDirMap = buildProjectDirMap(projects);
+  const repoPathMap = buildRepoPathMap(projects);
+  // id → name for looking up inferred project names
+  const projectIdToName = new Map<string, string>(projects.map((p) => [p.id, p.name]));
+  projectIdToName.set('project-dashboard', 'Project Dashboard');
 
   let projectDirs: string[] = [];
   try {
@@ -169,12 +180,20 @@ export async function getRecentLogs(
         return;
       }
 
-      const matched = matchProjectDir(dirName, projectDirMap);
+      // For home dir sessions, infer project from tool call paths
+      const isHomeDir = dirName === HOME_DIR_KEY;
+      const sessionRepoMap = isHomeDir ? repoPathMap : undefined;
 
       await Promise.all(
         files.map(async (f) => {
-          const session = await parseSession(join(dirPath, f));
+          const session = await parseSession(join(dirPath, f), sessionRepoMap);
           if (!session || !session.title || session.outputTokens < minTokens) return;
+
+          let matched = matchProjectDir(dirName, projectDirMap);
+          if (!matched && session.inferredProjectId) {
+            const id = session.inferredProjectId;
+            matched = { id, name: projectIdToName.get(id) ?? id };
+          }
 
           allSessions.push({
             sessionId: session.sessionId,

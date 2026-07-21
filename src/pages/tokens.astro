@@ -5,13 +5,24 @@ import { getClaudeUsage } from '../lib/claudeUsage.js';
 import type { MergedProject } from '../types/project.js';
 import type { ProjectUsage } from '../lib/claudeUsage.js';
 
+const WINDOWS = [
+  { label: '7d', days: 7 },
+  { label: '30d', days: 30 },
+  { label: '90d', days: 90 },
+  { label: 'All time', days: null },
+] as const;
+
+const daysParam = Astro.url.searchParams.get('days');
+const activeDays = daysParam ? (parseInt(daysParam, 10) || null) : null;
+const sinceMs = activeDays ? Date.now() - activeDays * 86_400_000 : undefined;
+
 let projects: MergedProject[] = [];
 let usageMap = new Map<string, ProjectUsage>();
 let loadError = false;
 
 try {
   projects = await getMergedProjects();
-  usageMap = await getClaudeUsage(projects);
+  usageMap = await getClaudeUsage(projects, { sinceMs });
 } catch (err) {
   console.error('[tokens] load failed:', err);
   loadError = true;
@@ -26,19 +37,21 @@ function fmtDate(iso: string | null): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-const rows = projects
-  .map((p) => ({ project: p, usage: usageMap.get(p.id) ?? null }))
-  .filter(({ usage }) => usage !== null && usage.sessionCount > 0)
-  .sort((a, b) => {
-    const aTotal = (a.usage!.inputTokens + a.usage!.outputTokens);
-    const bTotal = (b.usage!.inputTokens + b.usage!.outputTokens);
-    return bTotal - aTotal;
-  });
+// Build display rows: tracked projects + any inferred entries (e.g. project-dashboard) from the map
+const projectMap = new Map(projects.map((p) => [p.id, p]));
 
-const grandInput = rows.reduce((s, r) => s + r.usage!.inputTokens, 0);
-const grandOutput = rows.reduce((s, r) => s + r.usage!.outputTokens, 0);
-const grandCache = rows.reduce((s, r) => s + r.usage!.cacheCreationTokens + r.usage!.cacheReadTokens, 0);
-const grandSessions = rows.reduce((s, r) => s + r.usage!.sessionCount, 0);
+const rows = [...usageMap.entries()]
+  .filter(([, usage]) => usage.sessionCount > 0)
+  .map(([id, usage]) => ({
+    name: projectMap.get(id)?.name ?? (id === 'project-dashboard' ? 'Project Dashboard' : id),
+    usage,
+  }))
+  .sort((a, b) => (b.usage.inputTokens + b.usage.outputTokens) - (a.usage.inputTokens + a.usage.outputTokens));
+
+const grandInput = rows.reduce((s, r) => s + r.usage.inputTokens, 0);
+const grandOutput = rows.reduce((s, r) => s + r.usage.outputTokens, 0);
+const grandCache = rows.reduce((s, r) => s + r.usage.cacheCreationTokens + r.usage.cacheReadTokens, 0);
+const grandSessions = rows.reduce((s, r) => s + r.usage.sessionCount, 0);
 const grandTotal = grandInput + grandOutput;
 
 function pct(usage: ProjectUsage): string {
@@ -64,7 +77,27 @@ function pctNum(usage: ProjectUsage): number {
           <a href="/notes" class="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors duration-150">Notes</a>
         </nav>
       </div>
-      <p class="text-sm text-slate-500 dark:text-slate-500">Claude Code session token totals, read from <code class="font-mono text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-1 py-0.5 rounded">~/.claude/projects/</code>. Refreshes on every page load.</p>
+      <div class="flex items-center justify-between mt-2">
+        <p class="text-sm text-slate-500 dark:text-slate-500">Claude Code session token totals, read from <code class="font-mono text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-1 py-0.5 rounded">~/.claude/projects/</code>. Refreshes on every page load.</p>
+        <div class="flex items-center gap-1 shrink-0 ml-4">
+          {WINDOWS.map(({ label, days }) => {
+            const href = days ? `/tokens?days=${days}` : '/tokens';
+            const isActive = activeDays === days;
+            return (
+              <a
+                href={href}
+                class={`px-2.5 py-1 rounded text-xs font-medium transition-colors duration-150 ${
+                  isActive
+                    ? 'bg-indigo-600 text-white dark:bg-indigo-500'
+                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'
+                }`}
+              >
+                {label}
+              </a>
+            );
+          })}
+        </div>
+      </div>
     </header>
 
     {loadError && (
@@ -92,22 +125,22 @@ function pctNum(usage: ProjectUsage): number {
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ project, usage }) => (
+            {rows.map(({ name, usage }) => (
               <tr class="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors">
-                <td class="px-4 py-3 font-medium text-slate-900 dark:text-slate-200">{project.name}</td>
-                <td class="px-4 py-3 text-right text-slate-600 dark:text-slate-400 tabular-nums">{usage!.sessionCount}</td>
-                <td class="px-4 py-3 text-right text-slate-700 dark:text-slate-300 tabular-nums">{fmt(usage!.inputTokens)}</td>
-                <td class="px-4 py-3 text-right text-slate-700 dark:text-slate-300 tabular-nums">{fmt(usage!.outputTokens)}</td>
-                <td class="px-4 py-3 text-right text-slate-500 dark:text-slate-500 tabular-nums">{fmt(usage!.cacheCreationTokens + usage!.cacheReadTokens)}</td>
+                <td class="px-4 py-3 font-medium text-slate-900 dark:text-slate-200">{name}</td>
+                <td class="px-4 py-3 text-right text-slate-600 dark:text-slate-400 tabular-nums">{usage.sessionCount}</td>
+                <td class="px-4 py-3 text-right text-slate-700 dark:text-slate-300 tabular-nums">{fmt(usage.inputTokens)}</td>
+                <td class="px-4 py-3 text-right text-slate-700 dark:text-slate-300 tabular-nums">{fmt(usage.outputTokens)}</td>
+                <td class="px-4 py-3 text-right text-slate-500 dark:text-slate-500 tabular-nums">{fmt(usage.cacheCreationTokens + usage.cacheReadTokens)}</td>
                 <td class="px-4 py-3 text-right">
                   <div class="flex flex-col items-end gap-1">
-                    <span class="text-indigo-600 dark:text-indigo-400 font-semibold tabular-nums text-xs">{pct(usage!)}</span>
+                    <span class="text-indigo-600 dark:text-indigo-400 font-semibold tabular-nums text-xs">{pct(usage)}</span>
                     <div class="w-16 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                      <div class="h-full bg-indigo-400 dark:bg-indigo-500 rounded-full" style={`width: ${pctNum(usage!).toFixed(1)}%`}></div>
+                      <div class="h-full bg-indigo-400 dark:bg-indigo-500 rounded-full" style={`width: ${pctNum(usage).toFixed(1)}%`}></div>
                     </div>
                   </div>
                 </td>
-                <td class="px-4 py-3 text-right text-slate-500 dark:text-slate-500">{fmtDate(usage!.lastSessionDate)}</td>
+                <td class="px-4 py-3 text-right text-slate-500 dark:text-slate-500">{fmtDate(usage.lastSessionDate)}</td>
               </tr>
             ))}
           </tbody>
