@@ -154,7 +154,7 @@ export async function getRecentLogs(
   { limit = 7, minTokens = MAJOR_SESSION_MIN_TOKENS }: { limit?: number; minTokens?: number } = {},
 ): Promise<RecentLogsResult> {
   const projectDirMap = buildProjectDirMap(projects);
-  const repoPathMap = buildRepoPathMap(projects);
+  const repoPathMap = await buildRepoPathMap(projects);
   // id → name for looking up inferred project names
   const projectIdToName = new Map<string, string>(projects.map((p) => [p.id, p.name]));
   projectIdToName.set('project-dashboard', 'Project Dashboard');

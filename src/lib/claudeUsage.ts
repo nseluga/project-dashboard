@@ -27,7 +27,9 @@ function repoDirName(repoPath: string): string {
 }
 
 // Map from absolute repo path → projectId, for path-based project inference.
-export function buildRepoPathMap(projects: MergedProject[]): Map<string, string> {
+// Also scans .git/worktrees/ in each project to include standalone linked worktrees
+// (e.g. ~/bcns-l2-devteam-wt is a worktree of ~/bcns-client-l2detailz).
+export async function buildRepoPathMap(projects: MergedProject[]): Promise<Map<string, string>> {
   const home = homedir();
   const map = new Map<string, string>();
   for (const p of projects) {
@@ -36,9 +38,35 @@ export function buildRepoPathMap(projects: MergedProject[]): Map<string, string>
       p.repo === '~' ? home : p.repo.startsWith('~/') ? join(home, p.repo.slice(2)) : p.repo;
     map.set(expanded, p.id);
   }
-  // project-dashboard is skipped from the board board (SKIP_DIRS) but still a real project
   const pdPath = join(home, 'project-dashboard');
   if (!map.has(pdPath)) map.set(pdPath, 'project-dashboard');
+
+  // Add linked worktree paths for each project
+  await Promise.all(
+    [...map.entries()].map(async ([repoPath, projectId]) => {
+      const worktreesDir = join(repoPath, '.git', 'worktrees');
+      let wtNames: string[] = [];
+      try {
+        wtNames = await readdir(worktreesDir);
+      } catch {
+        return;
+      }
+      await Promise.all(
+        wtNames.map(async (wtName) => {
+          try {
+            // .git/worktrees/<name>/gitdir contains path to the worktree's .git file
+            const gitdirContent = await readFile(join(worktreesDir, wtName, 'gitdir'), 'utf-8');
+            // e.g. /Users/nate/bcns-l2-devteam-wt/.git
+            const wtGitFile = gitdirContent.trim();
+            if (wtGitFile.endsWith('/.git')) {
+              map.set(wtGitFile.slice(0, -5), projectId);
+            }
+          } catch {}
+        }),
+      );
+    }),
+  );
+
   return map;
 }
 
@@ -162,7 +190,7 @@ export async function getClaudeUsage(
   projects: MergedProject[],
   { sinceMs }: { sinceMs?: number } = {},
 ): Promise<Map<string, ProjectUsage>> {
-  const repoPathMap = buildRepoPathMap(projects);
+  const repoPathMap = await buildRepoPathMap(projects);
 
   // Sum tokens for each project's dedicated dir
   const projectEntries = await Promise.all(
