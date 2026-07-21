@@ -4,16 +4,40 @@
       "priority": "high"
     },
     "patio": {
-      "priority": "low"
+      "priority": "low",
+      "status": "on-hold"
     },
     "os": {
+      "priority": "medium"
+    },
+    "hitter-embedding": {
+      "status": "in-progress"
+    },
+    "portfolio-website": {
+      "priority": "medium"
+    },
+    "acme-labs": {
+      "priority": "high"
+    },
+    "pitcher-injury-risk": {
+      "priority": "low"
+    },
+    "batting-average-ability": {
+      "priority": "low"
+    },
+    "bcns": {
+      "priority": "high"
+    },
+    "bcns-client-delucas": {
+      "status": "on-hold",
       "priority": "medium"
     }
   },
   "due_dates": {
     "test-proj": "2026-09-01",
     "patio": "2026-08-31",
-    "portfolio-website": "2026-08-20"
+    "portfolio-website": "2026-08-20",
+    "hitter-embedding": "2026-09-27"
   },
   "inbox": [
     {
@@ -26,5 +50,12 @@
   ],
   "hidden_fields": {},
   "token_log": [],
-  "notes": []
+  "notes": [
+    {
+      "id": "b5dd26e8-2c22-4857-97e2-f3f1d4604947",
+      "text": "stylle lab project for designing websites apps and things like that, make it easy for me to put together brands templates things like that for layout loop to reference",
+      "projectId": null,
+      "created": "2026-07-21T02:50:06.617Z"
+    }
+  ]
 }
