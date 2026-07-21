@@ -18,10 +18,11 @@ try {
   loadError = true;
 }
 
-// Per-project list: all tracked projects, showing most recent session if available.
+// Per-project list: one entry per tracked project that has a recent major session.
 const projectSessions = allProjects
   .map((p) => ({ project: p, session: byProject.get(p.id) ?? null }))
-  .sort((a, b) => (b.session?.mtime ?? 0) - (a.session?.mtime ?? 0));
+  .filter((x): x is { project: MergedProject; session: SessionEntry } => x.session !== null)
+  .sort((a, b) => b.session.mtime - a.session.mtime);
 
 // Sessions from dirs not matched to any tracked project (home dir work, etc.)
 const unmatchedSessions = [...byProject.values()]
@@ -94,25 +95,16 @@ const unmatchedSessions = [...byProject.values()]
       ) : (
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {projectSessions.map(({ project, session }) => (
-            session ? (
-              <div class="rounded-lg px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 border-l-4 border-l-indigo-400 dark:border-l-indigo-600">
-                <div class="flex items-center justify-between mb-1">
-                  <span class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 truncate">{project.name}</span>
-                  <span class="text-xs text-slate-400 dark:text-slate-500 tabular-nums ml-2 shrink-0">{relativeTime(session.mtime)}</span>
-                </div>
-                <p class="text-sm font-medium text-slate-800 dark:text-slate-200 leading-snug">{session.title}</p>
-                {session.description && (
-                  <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-snug line-clamp-2">{session.description}</p>
-                )}
+            <div class="rounded-lg px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 border-l-4 border-l-indigo-400 dark:border-l-indigo-600">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 truncate">{project.name}</span>
+                <span class="text-xs text-slate-400 dark:text-slate-500 tabular-nums ml-2 shrink-0">{relativeTime(session.mtime)}</span>
               </div>
-            ) : (
-              <div class="rounded-lg px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 border-l-4 border-l-slate-300 dark:border-l-slate-700">
-                <div class="flex items-center justify-between mb-1">
-                  <span class="text-xs font-semibold text-slate-600 dark:text-slate-400 truncate">{project.name}</span>
-                </div>
-                <p class="text-sm text-slate-500 dark:text-slate-500 italic">No sessions yet</p>
-              </div>
-            )
+              <p class="text-sm font-medium text-slate-800 dark:text-slate-200 leading-snug">{session.title}</p>
+              {session.description && (
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-snug line-clamp-2">{session.description}</p>
+              )}
+            </div>
           ))}
 
           {unmatchedSessions.length > 0 && (
